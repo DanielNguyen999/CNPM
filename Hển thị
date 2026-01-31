@@ -11,7 +11,7 @@ def hien_thi_duyet_don(du_lieu_ai: dict) -> dict:
         "danh_sach_hang": []
     }
 
-  # Khung du lieu hien thi
+    # Khung du lieu hien thi
     for sp in du_lieu_ai["san_pham"]:
         don_duyet["danh_sach_hang"].append({
             "ten": sp["ten_sp"],
@@ -19,4 +19,22 @@ def hien_thi_duyet_don(du_lieu_ai: dict) -> dict:
             "don_gia": 0,
             "thanh_tien": 0
         })
-    return don_duyet 
+    return don_duyet
+
+# vd
+tin_nhan = "Anh Nam lay 10 xi mang va 20 gach"
+du_lieu_tu_ai = tao_don_nhap_ai(tin_nhan) 
+ket_qua = hien_thi_duyet_don(du_lieu_tu_ai)
+
+# In thong tin chung
+print(f"--- THÔNG TIN ĐƠN HÀNG ---")
+print(f"Khách hàng: {ket_qua['thong_tin_chung']['khach_hang']}")
+print(f"Ngày tạo:   {ket_qua['thong_tin_chung']['ngay_tao']}")
+print(f"Nội dung:   {ket_qua['thong_tin_chung']['noi_dung_goc']}")
+print("-" * 30)
+
+# In danh sach hang 
+print(f"{'Tên hàng':<15} | {'SL':<5} | {'Thành tiền'}")
+for hang in ket_qua["danh_sach_hang"]:
+    print(f"{hang['ten']:<15} | {hang['sl']:<5} | {hang['thanh_tien']}")
+print("-" * 30)
