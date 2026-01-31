@@ -1,0 +1,37 @@
+import re
+from datetime import datetime
+
+def tao_don_nhap_ai(van_ban: str) -> dict:
+    van_ban = van_ban.strip()
+    
+    # Khung du lieu 
+    don_nhap = {
+        "tieu_de": f"Don nhap {datetime.now().strftime('%H:%M')}",
+        "nguoi_gui": "", 
+        "ngay": datetime.now().strftime("%d/%m/%Y"),
+        "san_pham": [], 
+        "noi_dung_goc": van_ban
+    }
+    
+    # Boc tach ten khach hang
+    pattern_ten = r"(?:la|Anh|Chi|Em)\s+(([A-ZÀ-Ỹ][a-zà-ỹ]*\s?)+)"
+    match_ten = re.search(pattern_ten, van_ban)
+    if match_ten:
+        don_nhap["nguoi_gui"] = match_ten.group(1).strip().title()
+        
+    # Boc tach san pham & so luong
+    pattern_sp = r"(\d+)\s+([a-zà-ỹ\s]+?)(?=\s*(?:,|va|\.|$))"
+    items = re.findall(pattern_sp, van_ban, re.IGNORECASE)
+    
+    # Loc bo tu thua
+    tu_loai_bo = ["lay", "cho", "chi", "anh", "em", "mua", "ban"]
+    for qty, name in items:
+        ten_sp = name.lower()
+        for tu in tu_loai_bo:
+            ten_sp = ten_sp.replace(tu, "").strip()
+        if ten_sp:
+            don_nhap["san_pham"].append({
+                "ten_sp": ten_sp.capitalize(),
+                "so_luong": int(qty)
+            })
+    return don_nhap
