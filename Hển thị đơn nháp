@@ -1,0 +1,22 @@
+import re
+from datetime import datetime
+
+def hien_thi_duyet_don(du_lieu_ai: dict) -> dict:
+    don_duyet = {
+        "thong_tin_chung": {
+            "khach_hang": du_lieu_ai["nguoi_gui"],
+            "ngay_tao": du_lieu_ai["ngay"],
+            "noi_dung_goc": du_lieu_ai["noi_dung_goc"]
+        },
+        "danh_sach_hang": []
+    }
+
+  # Khung du lieu hien thi
+    for sp in du_lieu_ai["san_pham"]:
+        don_duyet["danh_sach_hang"].append({
+            "ten": sp["ten_sp"],
+            "sl": sp["so_luong"],
+            "don_gia": 0,
+            "thanh_tien": 0
+        })
+    return don_duyet 
