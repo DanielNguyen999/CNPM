@@ -1,0 +1,161 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bizflow_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-bizflow_root_2024}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bizflow}
+      MYSQL_USER: ${MYSQL_USER:-bizflow_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-bizflow_pass_2024}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/database/mysql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/database/mysql/seed_data.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    networks:
+      - bizflow_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD:-bizflow_root_2024} --silent"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+  postgres:
+    image: postgres:15
+    container_name: bizflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bizflow_reports}
+      POSTGRES_USER: ${POSTGRES_USER:-bizflow_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bizflow_pass_2024}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/postgresql/reporting_views.sql:/docker-entrypoint-initdb.d/01-views.sql
+    networks:
+      - bizflow_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bizflow_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  redis:
+    image: redis:7-alpine
+    container_name: bizflow_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bizflow_network
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-bizflow_redis_2024}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-bizflow_redis_2024}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: bizflow_chromadb
+    restart: unless-stopped
+    ports:
+      - "${CHROMADB_PORT:-8000}:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - bizflow_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bizflow_backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bizflow}
+      MYSQL_USER: ${MYSQL_USER:-bizflow_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-bizflow_pass_2024}
+
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: ${POSTGRES_DB:-bizflow_reports}
+      POSTGRES_USER: ${POSTGRES_USER:-bizflow_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bizflow_pass_2024}
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-bizflow_redis_2024}
+
+      CHROMADB_HOST: chromadb
+      CHROMADB_PORT: 8000
+
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_MINUTES: 1440
+
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+
+    depends_on:
+      mysql:
+        condition: service_started
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      chromadb:
+        condition: service_started
+
+    networks:
+      - bizflow_network
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+
+  frontend:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    container_name: bizflow_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+      NODE_ENV: production
+    depends_on:
+      - backend
+    networks:
+      - bizflow_network
+    command: node server.js
+
+networks:
+  bizflow_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  postgres_data:
+  redis_data:
+  chromadb_data:
