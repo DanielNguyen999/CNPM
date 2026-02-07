@@ -11,6 +11,7 @@ import '../../services/sse_service.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/dashboard/notification_bell.dart';
 import '../orders/order_list_screen.dart';
+import '../customers/customer_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -183,9 +184,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 3,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
+                crossAxisCount: 4,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
                 children: [
                   _buildActionButton(
                     context,
@@ -207,6 +208,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Icons.payments_outlined,
                     AppColors.success,
                     AppRoutes.debts,
+                  ),
+                  _buildActionButton(
+                    context,
+                    "Khách hàng",
+                    Icons.people_alt_outlined,
+                    AppColors.warning,
+                    '/customers', // Sẽ định nghĩa trong app.dart sau
                   ),
                 ],
               ),

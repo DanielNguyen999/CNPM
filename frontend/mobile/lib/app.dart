@@ -20,6 +20,9 @@ import 'screens/pos/quick_order_screen.dart';
 import 'screens/inventory/inventory_screen.dart';
 import 'screens/debts/debt_collection_screen.dart';
 import 'screens/debts/debt_detail_screen.dart';
+import 'screens/customers/customer_list_screen.dart';
+import 'screens/orders/order_list_screen.dart';
+import 'screens/orders/order_detail_screen.dart';
 
 class BizFlowApp extends StatelessWidget {
   final ApiClient apiClient;
@@ -95,12 +98,20 @@ class BizFlowApp extends StatelessWidget {
               AppRoutes.pos: (context) => const QuickOrderScreen(),
               AppRoutes.inventory: (context) => const InventoryScreen(),
               AppRoutes.debts: (context) => const DebtCollectionScreen(),
+              '/customers': (context) => const CustomerListScreen(),
+              '/orders': (context) => const OrderListScreen(),
             },
             onGenerateRoute: (settings) {
               if (settings.name == AppRoutes.debtDetail) {
                 final debtId = settings.arguments as int;
                 return MaterialPageRoute(
                   builder: (context) => DebtDetailScreen(debtId: debtId),
+                );
+              }
+              if (settings.name == '/order-detail') {
+                final orderId = settings.arguments as int;
+                return MaterialPageRoute(
+                  builder: (context) => OrderDetailScreen(orderId: orderId),
                 );
               }
               return null;
