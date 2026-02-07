@@ -11,7 +11,6 @@ import '../../services/sse_service.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/dashboard/notification_bell.dart';
 import '../orders/order_list_screen.dart';
-import '../customers/customer_list_screen.dart';
 import '../reports/reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -108,8 +107,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const NotificationBell(),
         IconButton(
-          icon: const Icon(Icons.logout),
-          onPressed: () => authState.logout(),
+          icon: const Icon(Icons.account_circle_outlined),
+          onPressed: () => Navigator.pushNamed(context, '/profile'),
         ),
       ],
       body: RefreshIndicator(

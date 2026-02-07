@@ -24,6 +24,7 @@ import 'screens/customers/customer_list_screen.dart';
 import 'screens/orders/order_list_screen.dart';
 import 'screens/orders/order_detail_screen.dart';
 import 'screens/reports/reports_screen.dart';
+import 'screens/profile/profile_screen.dart';
 
 class BizFlowApp extends StatelessWidget {
   final ApiClient apiClient;
@@ -102,6 +103,7 @@ class BizFlowApp extends StatelessWidget {
               '/customers': (context) => const CustomerListScreen(),
               '/orders': (context) => const OrderListScreen(),
               '/reports': (context) => const ReportsScreen(),
+              '/profile': (context) => const ProfileScreen(),
             },
             onGenerateRoute: (settings) {
               if (settings.name == AppRoutes.debtDetail) {
