@@ -10,6 +10,7 @@ import '../../services/reports_service.dart';
 import '../../services/sse_service.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/dashboard/notification_bell.dart';
+import '../orders/order_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -92,6 +93,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       title: "BizFlow",
       showBackButton: false,
       actions: [
+        IconButton(
+          icon: const Icon(Icons.history),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OrderListScreen()),
+          ),
+        ),
         const NotificationBell(),
         IconButton(
           icon: const Icon(Icons.logout),

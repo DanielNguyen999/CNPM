@@ -7,6 +7,28 @@ class OrderService {
 
   OrderService(this.apiClient);
 
+  Future<List<Order>> listOrders({String? status, String? search}) async {
+    try {
+      final response = await apiClient.dio.get('/orders', queryParameters: {
+        if (status != null) 'payment_status': status,
+        if (search != null) 'search': search,
+      });
+      final List data = response.data['items'] ?? [];
+      return data.map((json) => Order.fromJson(json)).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Order> getOrderDetail(int id) async {
+    try {
+      final response = await apiClient.dio.get('/orders/$id');
+      return Order.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Order> createOrder(Map<String, dynamic> payload,
       {String? idempotencyKey}) async {
     try {
