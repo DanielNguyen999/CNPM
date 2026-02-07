@@ -9,7 +9,7 @@ from middleware.idempotency import IdempotencyMiddleware
 # Import routers
 from api.v1.routes import (
     inventory, reports, ai, units, debts, users, portal, admin, events,
-    auth, orders, products, customers, draft_orders, ai_reports
+    auth, orders, products, customers, draft_orders, ai_reports, notifications
 )
 
 # Create FastAPI app
@@ -124,6 +124,7 @@ app.include_router(ai_reports.router, prefix="/api/v1/ai-reports", tags=["AI Rep
 app.include_router(portal.router, prefix="/api/v1/portal", tags=["Portal"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(events.router, prefix="/api/v1/events", tags=["Events"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["Notifications"])
 
 
 if __name__ == "__main__":
