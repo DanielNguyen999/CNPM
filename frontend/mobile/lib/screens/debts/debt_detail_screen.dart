@@ -99,8 +99,6 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
-                                boxBaseline: TextBaseline.alphabetic,
-                                crossAxisAlignment: CrossAxisAlignment.baseline,
                                 children: [
                                   const Text(
                                     "Lịch sử thanh toán",

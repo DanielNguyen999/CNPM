@@ -5,6 +5,7 @@ import '../services/notification_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _service;
+  final bool isLoggedIn;
 
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
@@ -14,15 +15,17 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
-  NotificationProvider(this._service) {
-    fetchNotifications();
-    startPolling();
+  NotificationProvider(this._service, {this.isLoggedIn = false}) {
+    if (isLoggedIn) {
+      fetchNotifications();
+      startPolling();
+    }
   }
 
   Future<void> fetchNotifications() async {
+    if (!isLoggedIn) return;
     try {
       final fetched = await _service.getNotifications();
-      // Only update and notify if data actually changed to avoid unnecessary rebuilds
       _notifications = fetched;
       notifyListeners();
     } catch (e) {
@@ -32,6 +35,7 @@ class NotificationProvider extends ChangeNotifier {
 
   void startPolling() {
     _pollingTimer?.cancel();
+    if (!isLoggedIn) return;
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       fetchNotifications();
     });
@@ -45,7 +49,6 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> markAsRead(int id) async {
     try {
       await _service.markAsRead(id);
-      // Optimistic update
       final index = _notifications.indexWhere((n) => n.id == id);
       if (index != -1) {
         final n = _notifications[index];
