@@ -29,15 +29,16 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
   }
 
   Future<void> _loadDetail() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final debtService = Provider.of<DebtService>(context, listen: false);
       final detail = await debtService.getDebtDetail(widget.debtId);
-      setState(() => _debt = detail);
+      if (mounted) setState(() => _debt = detail);
     } catch (e) {
-      // Error
+      debugPrint("Error loading debt detail: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -60,7 +61,11 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
               method: method,
               notes: notes,
             );
-            Fluttertoast.showToast(msg: "Thu tiền thành công");
+            Fluttertoast.showToast(
+              msg: "Thu tiền thành công!",
+              backgroundColor: AppColors.success,
+              textColor: Colors.white,
+            );
             _loadDetail();
           } catch (e) {
             Fluttertoast.showToast(msg: "Lỗi: $e");
@@ -73,7 +78,7 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: "Chi tiết công nợ",
+      title: "Quản lý nợ",
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _debt == null
@@ -81,115 +86,80 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
               : Column(
                   children: [
                     Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildInfoCard(),
-                            const SizedBox(height: 24),
-                            const Text(
-                              "Lịch sử thanh toán",
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_debt!.payments == null ||
-                                _debt!.payments!.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: Center(
-                                    child: Text("Chưa có thanh toán nào",
-                                        style: TextStyle(
-                                            color: AppColors.textSecondary))),
-                              )
-                            else
-                              ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _debt!.payments!.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 12),
-                                itemBuilder: (context, index) {
-                                  final p = _debt!.payments![index];
-                                  return Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border:
-                                          Border.all(color: AppColors.slate200),
+                      child: RefreshIndicator(
+                        onRefresh: _loadDetail,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInfoCard(),
+                              const SizedBox(height: 32),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                boxBaseline: TextBaseline.alphabetic,
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                children: [
+                                  const Text(
+                                    "Lịch sử thanh toán",
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  if (_debt!.payments != null &&
+                                      _debt!.payments!.isNotEmpty)
+                                    Text(
+                                      "${_debt!.payments!.length} lần",
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.success
-                                                .withOpacity(0.1),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(Icons.check,
-                                              color: AppColors.success,
-                                              size: 20),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                AppFormatters.formatCurrency(
-                                                    p.paymentAmount),
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              ),
-                                              Text(
-                                                AppFormatters.formatDateTime(
-                                                    p.createdAt),
-                                                style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: AppColors
-                                                        .textSecondary),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          p.paymentMethod == 'CASH'
-                                              ? 'Tiền mặt'
-                                              : 'CK',
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                                ],
                               ),
-                          ],
+                              const SizedBox(height: 16),
+                              if (_debt!.payments == null ||
+                                  _debt!.payments!.isEmpty)
+                                _buildEmptyPayments()
+                              else
+                                _buildPaymentList(),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                     if (_debt!.remainingAmount > 0)
-                      Padding(
+                      Container(
                         padding: const EdgeInsets.all(20),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: ElevatedButton(
-                            onPressed: _showRepayModal,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, -4),
                             ),
-                            child: const Text("Thu tiền nợ",
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        child: SafeArea(
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: ElevatedButton(
+                              onPressed: _showRepayModal,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text("Tiến hành thu nợ",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
                           ),
                         ),
                       ),
@@ -198,72 +168,199 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
     );
   }
 
+  Widget _buildEmptyPayments() {
+    return Center(
+      child: Column(
+        children: const [
+          SizedBox(height: 40),
+          Icon(Icons.history, color: AppColors.slate200, size: 64),
+          SizedBox(height: 16),
+          Text("Chưa có giao dịch trả nợ nào",
+              style: TextStyle(color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentList() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _debt!.payments!.length,
+      itemBuilder: (context, index) {
+        final p = _debt!.payments![index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.slate100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.receipt_outlined,
+                    color: AppColors.success, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppFormatters.formatCurrency(p.paymentAmount),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      AppFormatters.formatDateTime(p.createdAt),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  p.paymentMethod == 'CASH' ? 'Tiền mặt' : 'CK Khoản',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildInfoCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xFF1e40af)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _debt!.customerName,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _debt!.customerName.toUpperCase(),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Đơn: ${_debt!.orderCode}",
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.7), fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
               StatusBadge(
                   status: _debt!.status,
-                  label: _debt!.status == 'PAID' ? 'Đã trả' : 'Cần thu'),
+                  label: _debt!.status == 'PAID' ? 'HOÀN TẤT' : 'CHƯA THU'),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.receipt_long, color: Colors.white70, size: 14),
-              const SizedBox(width: 4),
-              Text(_debt!.orderCode,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ],
-          ),
-          const Divider(color: Colors.white24, height: 32),
+          const SizedBox(height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildCompactStat(
-                  "Tổng nợ", AppFormatters.formatCurrency(_debt!.totalAmount)),
-              _buildCompactStat(
-                  "Đã trả", AppFormatters.formatCurrency(_debt!.paidAmount)),
-              _buildCompactStat("Còn lại",
-                  AppFormatters.formatCurrency(_debt!.remainingAmount),
-                  isBold: true),
+              _buildCompactStat("Tổng nợ đơn",
+                  AppFormatters.formatCurrency(_debt!.totalAmount)),
+              _buildCompactStat("Đã thanh toán",
+                  AppFormatters.formatCurrency(_debt!.paidAmount)),
             ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("CÒN LẠI PHẢI THU",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+                Text(
+                  AppFormatters.formatCurrency(_debt!.remainingAmount),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCompactStat(String label, String value, {bool isBold = false}) {
+  Widget _buildCompactStat(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 10)),
+            style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 10,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            fontSize: 14,
-          ),
-        ),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14)),
       ],
     );
   }
