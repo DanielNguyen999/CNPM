@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'package:provider/provider.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import '../../core/auth/auth_state.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_routes.dart';
-import '../../core/utils/formatters.dart';
 import '../../services/reports_service.dart';
 import '../../services/sse_service.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/dashboard/notification_bell.dart';
 import '../orders/order_list_screen.dart';
 import '../reports/reports_screen.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_routes.dart';
+import '../../models/dashboard_stats.dart';
+import '../inventory/inventory_screen.dart';
+import '../debts/debt_collection_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,50 +22,13 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   double _todayRevenue = 0;
-  int _todayOrdersCount = 0;
   double _totalDebt = 0;
   int _lowStockCount = 0;
-  StreamSubscription? _sseSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadStats();
-
-    // Setup SSE listener
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final sseService = Provider.of<SSEService>(context, listen: false);
-      _sseSubscription = sseService.events.listen((event) {
-        final type = event['type'];
-        final payload = event['payload'];
-
-        if (type == 'ORDER_CREATED') {
-          Fluttertoast.showToast(
-            msg:
-                "Đơn hàng mới: ${payload['order_code']} - ${AppFormatters.formatCurrency(payload['total_amount'])}",
-            backgroundColor: AppColors.primary,
-            textColor: Colors.white,
-            gravity: ToastGravity.TOP,
-          );
-          _loadStats();
-        } else if (type == 'DEBT_REPAID') {
-          Fluttertoast.showToast(
-            msg:
-                "Thanh toán công nợ: ${AppFormatters.formatCurrency(payload['payment_amount'])}",
-            backgroundColor: AppColors.success,
-            textColor: Colors.white,
-            gravity: ToastGravity.TOP,
-          );
-          _loadStats();
-        }
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _sseSubscription?.cancel();
-    super.dispose();
   }
 
   Future<void> _loadStats() async {
@@ -73,15 +36,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final reportsService =
           Provider.of<ReportsService>(context, listen: false);
       final stats = await reportsService.getDashboardStats();
-
       setState(() {
         _todayRevenue = stats.todayRevenue;
-        _todayOrdersCount = stats.todayOrdersCount;
         _totalDebt = stats.totalDebtPending;
         _lowStockCount = stats.lowStockCount;
       });
     } catch (e) {
-      // Silent error or toast
+      // Silent
     }
   }
 
@@ -115,113 +76,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onRefresh: _loadStats,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Xin chào, ${user?.fullName ?? 'Người dùng'}",
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const Text(
-                "Tổng quan hôm nay",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Revenue Card
-              _buildStatCard(
-                "Doanh thu hôm nay",
-                AppFormatters.formatCurrency(_todayRevenue),
-                Icons.trending_up,
-                AppColors.primary,
+              _buildModernHeader(user?.fullName ?? "Người dùng"),
+              const SizedBox(height: 20),
+              _buildStatsSection(),
+              const SizedBox(height: 32),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text("QUẢN LÝ CỬA HÀNG",
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.slate400,
+                        letterSpacing: 1.5)),
               ),
               const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      "Số đơn hàng",
-                      _todayOrdersCount.toString(),
-                      Icons.shopping_bag_outlined,
-                      AppColors.info,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      "Cần nhập kho",
-                      _lowStockCount.toString(),
-                      Icons.warning_amber_rounded,
-                      AppColors.warning,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildStatCard(
-                "Tổng nợ khách hàng",
-                AppFormatters.formatCurrency(_totalDebt),
-                Icons.account_balance_wallet_outlined,
-                AppColors.error,
-              ),
-
+              _buildFullServiceGrid(),
               const SizedBox(height: 40),
-              const Text(
-                "Thao tác nhanh",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                children: [
-                  _buildActionButton(
-                    context,
-                    "Bán hàng",
-                    Icons.add_shopping_cart,
-                    AppColors.primary,
-                    AppRoutes.pos,
-                  ),
-                  _buildActionButton(
-                    context,
-                    "Kiểm kho",
-                    Icons.inventory_2_outlined,
-                    AppColors.info,
-                    AppRoutes.inventory,
-                  ),
-                  _buildActionButton(
-                    context,
-                    "Thu nợ",
-                    Icons.payments_outlined,
-                    AppColors.success,
-                    AppRoutes.debts,
-                  ),
-                  _buildActionButton(
-                    context,
-                    "Khách hàng",
-                    Icons.people_alt_outlined,
-                    AppColors.warning,
-                    '/customers', // Sẽ định nghĩa trong app.dart sau
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -229,87 +102,132 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+  Widget _buildModernHeader(String name) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.slate200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppColors.primary.withOpacity(0.1),
+            child: Text(name[0].toUpperCase(),
+                style: const TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Xin chào,",
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              Text(name,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context,
-    String label,
-    IconData icon,
-    Color color,
-    String route,
-  ) {
+  Widget _buildStatsSection() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          _buildCompactStat("Hôm nay", "12.5tr", AppColors.success),
+          const SizedBox(width: 12),
+          _buildCompactStat("Nợ cần thu", "24.8tr", AppColors.error),
+          const SizedBox(width: 12),
+          _buildCompactStat("Sắp hết hàng", "05 SP", AppColors.warning),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactStat(String label, String value, Color color) {
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFullServiceGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 4,
+        mainAxisSpacing: 20,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.8,
+        children: [
+          _buildGridItem("Bán hàng", Icons.add_shopping_cart, AppColors.primary,
+              AppRoutes.pos),
+          _buildGridItem("Kho hàng", Icons.inventory_2_outlined,
+              AppColors.success, AppRoutes.inventory),
+          _buildGridItem("Khách hàng", Icons.people_alt_outlined,
+              AppColors.warning, '/customers'),
+          _buildGridItem(
+              "Đối tác", Icons.business_outlined, AppColors.info, '/suppliers'),
+          _buildGridItem("Công nợ", Icons.account_balance_wallet_outlined,
+              AppColors.error, AppRoutes.debts),
+          _buildGridItem(
+              "Sổ quỹ", Icons.account_balance, Colors.purple, '/cashbook'),
+          _buildGridItem(
+              "Kiểm kho", Icons.inventory_outlined, Colors.teal, '/adjustment'),
+          _buildGridItem(
+              "Báo cáo", Icons.analytics_outlined, Colors.indigo, '/reports'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridItem(
+      String label, IconData icon, Color color, String route) {
     return InkWell(
       onTap: () => Navigator.pushNamed(context, route),
       borderRadius: BorderRadius.circular(16),
       child: Column(
         children: [
           Container(
-            width: 64,
-            height: 64,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withOpacity(0.2)),
+              border: Border.all(color: color.withOpacity(0.1)),
             ),
-            child: Icon(icon, color: color, size: 28),
+            child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
             textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary),
           ),
         ],
       ),

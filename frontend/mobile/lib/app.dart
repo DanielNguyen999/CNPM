@@ -25,6 +25,9 @@ import 'screens/orders/order_list_screen.dart';
 import 'screens/orders/order_detail_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/suppliers/supplier_list_screen.dart';
+import 'screens/cashbook/cashbook_screen.dart';
+import 'screens/inventory_adjustment/inventory_adjustment_screen.dart';
 
 class BizFlowApp extends StatelessWidget {
   final ApiClient apiClient;
@@ -104,6 +107,9 @@ class BizFlowApp extends StatelessWidget {
               '/orders': (context) => const OrderListScreen(),
               '/reports': (context) => const ReportsScreen(),
               '/profile': (context) => const ProfileScreen(),
+              '/suppliers': (context) => const SupplierListScreen(),
+              '/cashbook': (context) => const CashbookScreen(),
+              '/adjustment': (context) => const InventoryAdjustmentScreen(),
             },
             onGenerateRoute: (settings) {
               if (settings.name == AppRoutes.debtDetail) {
