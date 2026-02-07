@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/auth/auth_state.dart';
 import '../../services/reports_service.dart';
-import '../../services/sse_service.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/dashboard/notification_bell.dart';
 import '../orders/order_list_screen.dart';
-import '../reports/reports_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
-import '../../models/dashboard_stats.dart';
-import '../inventory/inventory_screen.dart';
-import '../debts/debt_collection_screen.dart';
+import '../../core/utils/formatters.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -28,78 +24,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadStats();
+    });
   }
 
   Future<void> _loadStats() async {
+    if (!mounted) return;
     try {
       final reportsService =
           Provider.of<ReportsService>(context, listen: false);
       final stats = await reportsService.getDashboardStats();
-      setState(() {
-        _todayRevenue = stats.todayRevenue;
-        _totalDebt = stats.totalDebtPending;
-        _lowStockCount = stats.lowStockCount;
-      });
+      if (mounted) {
+        setState(() {
+          _todayRevenue = stats.todayRevenue;
+          _totalDebt = stats.totalDebtPending;
+          _lowStockCount = stats.lowStockCount;
+        });
+      }
     } catch (e) {
-      // Silent
+      debugPrint("Error loading dashboard stats: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = Provider.of<AuthState>(context);
-    final user = authState.user;
+    try {
+      final authState = Provider.of<AuthState>(context);
+      final user = authState.user;
+      final name = user?.fullName ?? "Người dùng";
 
-    return AppScaffold(
-      title: "BizFlow",
-      showBackButton: false,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.bar_chart_outlined),
-          onPressed: () => Navigator.pushNamed(context, '/reports'),
-        ),
-        IconButton(
-          icon: const Icon(Icons.history),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const OrderListScreen()),
+      return AppScaffold(
+        title: "BizFlow",
+        showBackButton: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart_outlined),
+            onPressed: () => Navigator.pushNamed(context, '/reports'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const OrderListScreen()),
+            ),
+          ),
+          const NotificationBell(),
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => Navigator.pushNamed(context, '/profile'),
+          ),
+        ],
+        body: RefreshIndicator(
+          onRefresh: _loadStats,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildModernHeader(name),
+                const SizedBox(height: 20),
+                _buildStatsSection(),
+                const SizedBox(height: 32),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text("QUẢN LÝ CỬA HÀNG",
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.slate400,
+                          letterSpacing: 1.5)),
+                ),
+                const SizedBox(height: 16),
+                _buildFullServiceGrid(),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
-        const NotificationBell(),
-        IconButton(
-          icon: const Icon(Icons.account_circle_outlined),
-          onPressed: () => Navigator.pushNamed(context, '/profile'),
+      );
+    } catch (e) {
+      return Scaffold(
+        body: Center(
+          child: Text("Đã xảy ra lỗi: $e"),
         ),
-      ],
-      body: RefreshIndicator(
-        onRefresh: _loadStats,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildModernHeader(user?.fullName ?? "Người dùng"),
-              const SizedBox(height: 20),
-              _buildStatsSection(),
-              const SizedBox(height: 32),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text("QUẢN LÝ CỬA HÀNG",
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.slate400,
-                        letterSpacing: 1.5)),
-              ),
-              const SizedBox(height: 16),
-              _buildFullServiceGrid(),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildModernHeader(String name) {
@@ -137,11 +147,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          _buildCompactStat("Hôm nay", "12.5tr", AppColors.success),
+          _buildCompactStat("Hôm nay",
+              AppFormatters.formatCurrency(_todayRevenue), AppColors.success),
           const SizedBox(width: 12),
-          _buildCompactStat("Nợ cần thu", "24.8tr", AppColors.error),
+          _buildCompactStat("Nợ cần thu",
+              AppFormatters.formatCurrency(_totalDebt), AppColors.error),
           const SizedBox(width: 12),
-          _buildCompactStat("Sắp hết hàng", "05 SP", AppColors.warning),
+          _buildCompactStat(
+              "Sắp hết hàng", "$_lowStockCount SP", AppColors.warning),
         ],
       ),
     );
@@ -165,7 +178,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 4),
           Text(value,
               style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w900, color: color)),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                  overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -206,7 +222,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildGridItem(
       String label, IconData icon, Color color, String route) {
     return InkWell(
-      onTap: () => Navigator.pushNamed(context, route),
+      onTap: () {
+        try {
+          Navigator.pushNamed(context, route);
+        } catch (e) {
+          debugPrint("Navigation error: $e");
+        }
+      },
       borderRadius: BorderRadius.circular(16),
       child: Column(
         children: [

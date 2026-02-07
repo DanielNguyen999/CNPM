@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../services/product_service.dart'; // Giả sử service này có API NCC hoặc dùng SupplierService
 import '../../core/constants/app_colors.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/common/loading_skeleton.dart';
@@ -27,35 +25,35 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   Future<void> _loadSuppliers() async {
     setState(() => _isLoading = true);
     try {
-      // Mocking/Calling API NCC
-      // final results = await supplierService.listSuppliers();
-      await Future.delayed(const Duration(seconds: 1)); // Giả lập load
-      setState(() {
-        _suppliers = [
-          {
-            'name': 'Nhà phân phối Hùng Phát',
-            'phone': '0987654321',
-            'address': 'Hà Nội',
-            'debt': 1500000
-          },
-          {
-            'name': 'Công ty CP Thiên Long',
-            'phone': '0912345678',
-            'address': 'TP.HCM',
-            'debt': 0
-          },
-          {
-            'name': 'Đại lý Bia Sài Gòn',
-            'phone': '0901234567',
-            'address': 'Đà Nẵng',
-            'debt': 5200000
-          },
-        ];
-      });
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) {
+        setState(() {
+          _suppliers = [
+            {
+              'name': 'Nhà phân phối Hùng Phát',
+              'phone': '0987654321',
+              'address': 'Hà Nội',
+              'debt': 1500000
+            },
+            {
+              'name': 'Công ty CP Thiên Long',
+              'phone': '0912345678',
+              'address': 'TP.HCM',
+              'debt': 0
+            },
+            {
+              'name': 'Đại lý Bia Sài Gòn',
+              'phone': '0901234567',
+              'address': 'Đà Nẵng',
+              'debt': 5200000
+            },
+          ];
+        });
+      }
     } catch (e) {
       debugPrint("Error: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

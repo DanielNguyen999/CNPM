@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../providers/notification_provider.dart';
 import '../../core/constants/app_colors.dart';
 
@@ -26,15 +25,9 @@ class NotificationBell extends StatelessWidget {
                     : AppColors.textSecondary,
               ),
               onPressed: () {
-                // TODO: Navigate to notification screen or show modal
                 _showNotificationSheet(context);
               },
-            )
-                .animate(
-                  target: unreadCount > 0 ? 1 : 0,
-                  onPlay: (controller) => controller.repeat(),
-                )
-                .shake(hz: 2, curve: Curves.easeInOut),
+            ),
             if (unreadCount > 0)
               Positioned(
                 top: 8,
@@ -59,10 +52,7 @@ class NotificationBell extends StatelessWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                ).animate().scale(
-                      duration: 200.ms,
-                      curve: Curves.elasticOut,
-                    ),
+                ),
               ),
           ],
         );
@@ -71,7 +61,6 @@ class NotificationBell extends StatelessWidget {
   }
 
   void _showNotificationSheet(BuildContext context) {
-    // We'll implement the list view here in a bit
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
