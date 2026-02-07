@@ -12,6 +12,7 @@ import '../../services/customer_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/common/app_scaffold.dart';
+import '../../widgets/pos/order_success_dialog.dart';
 
 class QuickOrderScreen extends StatefulWidget {
   const QuickOrderScreen({super.key});
@@ -132,10 +133,29 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
         'notes': 'Mobile POS order',
       };
 
-      await orderService.createOrder(payload, idempotencyKey: idempotencyKey);
+      final response = await orderService.createOrder(payload,
+          idempotencyKey: idempotencyKey);
 
-      Fluttertoast.showToast(msg: "Tạo đơn thành công!");
-      if (mounted) Navigator.pop(context); // Back to Dashboard
+      if (mounted) {
+        // Close CheckoutSheet first
+        Navigator.pop(context);
+
+        // Show Success Dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              OrderSuccessDialog(orderData: response.toJson()),
+        ).then((_) {
+          // Reset cart after dialog is closed
+          if (mounted) {
+            setState(() {
+              _cartItems.clear();
+              _selectedCustomer = null;
+            });
+          }
+        });
+      }
     } catch (e) {
       Fluttertoast.showToast(msg: "Lỗi: $e");
     } finally {

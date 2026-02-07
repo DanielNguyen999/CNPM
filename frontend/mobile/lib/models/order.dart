@@ -33,6 +33,19 @@ class Order {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'order_code': orderCode,
+      'customer_id': customerId,
+      'total_amount': totalAmount,
+      'paid_amount': paidAmount,
+      'payment_status': paymentStatus,
+      'created_at': createdAt,
+      'items': items?.map((i) => i.toJson()).toList(),
+    };
+  }
 }
 
 class OrderItem {
@@ -61,5 +74,16 @@ class OrderItem {
       unitPrice: (json['unit_price'] ?? 0).toDouble(),
       lineTotal: (json['line_total'] ?? 0).toDouble(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'product_id': productId,
+      'product_name': productName,
+      'quantity': quantity,
+      'unit_price': unitPrice,
+      'line_total': lineTotal,
+    };
   }
 }
