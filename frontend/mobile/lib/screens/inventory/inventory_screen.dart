@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../services/product_service.dart';
 import '../../models/product.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/formatters.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/common/loading_skeleton.dart';
 import '../../widgets/common/empty_state.dart';
@@ -18,6 +20,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final _searchController = TextEditingController();
   List<Product> _products = [];
   bool _isLoading = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -25,7 +28,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
     _loadProducts('');
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadProducts(String query) async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final productService =
@@ -34,112 +45,185 @@ class _InventoryScreenState extends State<InventoryScreen> {
           search: query.isEmpty ? null : query);
       setState(() => _products = results);
     } catch (e) {
-      // Error
+      debugPrint("Error loading products: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _loadProducts(query);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: "Kiểm kho nhanh",
+      title: "Kho hàng",
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: "Tìm sản phẩm...",
-                prefixIcon: const Icon(Icons.search),
+                hintText: "Tên hoặc mã sản phẩm...",
+                prefixIcon: const Icon(Icons.search, color: AppColors.slate400),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: AppColors.slate50,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.slate200),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.slate200),
+                  borderSide: BorderSide.none,
                 ),
               ),
-              onChanged: (val) => _loadProducts(val),
+              onChanged: _onSearchChanged,
             ),
           ),
           Expanded(
             child: _isLoading
                 ? const LoadingListSkeleton()
-                : _products.isEmpty
-                    ? const EmptyState(message: "Không tìm thấy sản phẩm")
-                    : ListView.separated(
-                        itemCount: _products.length,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final product = _products[index];
-                          final isLowStock =
-                              product.availableQuantity != null &&
-                                  product.availableQuantity! < 10;
-
-                          return ListTile(
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 8),
-                            title: Text(
-                              product.name,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Row(
-                              children: [
-                                Text(
-                                  "Mã: ${product.productCode}",
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                const SizedBox(width: 8),
-                                if (isLowStock)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.error.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      "Sắp hết",
-                                      style: TextStyle(
-                                          color: AppColors.error,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "${product.availableQuantity ?? 0}",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: isLowStock
-                                        ? AppColors.error
-                                        : AppColors.textPrimary,
-                                  ),
-                                ),
-                                const Text("Tồn",
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.textSecondary)),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                : RefreshIndicator(
+                    onRefresh: () => _loadProducts(_searchController.text),
+                    child: _products.isEmpty
+                        ? const EmptyState(
+                            message: "Không tìm thấy sản phẩm nào")
+                        : ListView.builder(
+                            itemCount: _products.length,
+                            padding: const EdgeInsets.all(16),
+                            itemBuilder: (context, index) {
+                              final product = _products[index];
+                              return _buildProductCard(product);
+                            },
+                          ),
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProductCard(Product product) {
+    final isLowStock =
+        product.availableQuantity != null && product.availableQuantity! < 10;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.slate200),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Product Image Placeholder/Thumbnail
+              Container(
+                width: 80,
+                color: AppColors.slate100,
+                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                            Icons.image_not_supported_outlined,
+                            color: AppColors.slate400),
+                      )
+                    : const Icon(Icons.inventory_2_outlined,
+                        color: AppColors.slate400),
+              ),
+
+              // Product Details
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "SKU: ${product.productCode}",
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const Spacer(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            AppFormatters.formatCurrency(product.price),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: (isLowStock
+                                      ? AppColors.error
+                                      : AppColors.success)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isLowStock
+                                      ? Icons.warning_amber_rounded
+                                      : Icons.check_circle_outline,
+                                  size: 14,
+                                  color: isLowStock
+                                      ? AppColors.error
+                                      : AppColors.success,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "${product.availableQuantity?.toInt() ?? 0} ${product.units?.isNotEmpty == true ? product.units!.first.name : ''}",
+                                  style: TextStyle(
+                                    color: isLowStock
+                                        ? AppColors.error
+                                        : AppColors.success,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
