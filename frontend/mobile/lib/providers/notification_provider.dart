@@ -5,7 +5,7 @@ import '../services/notification_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _service;
-  final bool isLoggedIn;
+  bool _isLoggedIn;
 
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
@@ -13,17 +13,32 @@ class NotificationProvider extends ChangeNotifier {
 
   List<NotificationModel> get notifications => _notifications;
   bool get isLoading => _isLoading;
+  bool get isLoggedIn => _isLoggedIn;
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
-  NotificationProvider(this._service, {this.isLoggedIn = false}) {
-    if (isLoggedIn) {
+  NotificationProvider(this._service, {bool isLoggedIn = false})
+      : _isLoggedIn = isLoggedIn {
+    if (_isLoggedIn) {
       fetchNotifications();
       startPolling();
     }
   }
 
+  void updateAuthStatus(bool status) {
+    if (_isLoggedIn == status) return;
+    _isLoggedIn = status;
+    if (_isLoggedIn) {
+      fetchNotifications();
+      startPolling();
+    } else {
+      stopPolling();
+      _notifications = [];
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchNotifications() async {
-    if (!isLoggedIn) return;
+    if (!_isLoggedIn) return;
     try {
       final fetched = await _service.getNotifications();
       _notifications = fetched;
@@ -35,7 +50,7 @@ class NotificationProvider extends ChangeNotifier {
 
   void startPolling() {
     _pollingTimer?.cancel();
-    if (!isLoggedIn) return;
+    if (!_isLoggedIn) return;
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       fetchNotifications();
     });

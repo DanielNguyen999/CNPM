@@ -110,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primary.withOpacity(0.1),
-            child: Text(name[0].toUpperCase(),
+            child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
                 style: const TextStyle(
                     color: AppColors.primary, fontWeight: FontWeight.bold)),
           ),

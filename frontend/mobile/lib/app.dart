@@ -57,19 +57,9 @@ class BizFlowApp extends StatelessWidget {
             isLoggedIn: context.read<AuthState>().isLoggedIn,
           ),
           update: (context, authState, service, previous) {
-            if (previous == null) {
-              return NotificationProvider(service,
-                  isLoggedIn: authState.isLoggedIn);
-            }
-            if (previous.isLoggedIn != authState.isLoggedIn) {
-              if (authState.isLoggedIn) {
-                previous.startPolling();
-                previous.fetchNotifications();
-              } else {
-                previous.stopPolling();
-              }
-            }
-            return previous;
+            final provider = previous ?? NotificationProvider(service);
+            provider.updateAuthStatus(authState.isLoggedIn);
+            return provider;
           },
         ),
         ProxyProvider<AuthState, SSEService>(
