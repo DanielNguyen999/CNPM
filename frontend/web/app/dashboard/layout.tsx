@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import apiClient from "@/lib/apiClient";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 const sidebarItems = [
     {
@@ -112,10 +113,15 @@ export default function DashboardLayout({
 }) {
     const pathname = usePathname();
     const router = useRouter();
-    const { logout, user, isAuthenticated } = useAuthStore();
+    const { logout, user, isAuthenticated, _hasHydrated } = useAuthStore();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const profileRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Filter items based on user role
     const filteredItems = sidebarItems.filter(item =>
@@ -176,12 +182,16 @@ export default function DashboardLayout({
 
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.full_name || user?.email || 'User')}&background=6366f1&color=fff&bold=true`;
 
+    if (!mounted || !_hasHydrated || !isAuthenticated) {
+        return null;
+    }
+
     return (
         <div className="min-h-screen flex bg-slate-50 font-sans">
             {/* Sidebar (Desktop) */}
             <aside
                 className={cn(
-                    "fixed inset-y-0 z-50 flex w-64 flex-col transition-all duration-300 md:static",
+                    "fixed inset-y-0 z-50 flex w-64 flex-col transition-all duration-300 md:static md:translate-x-0 shadow-xl print:hidden",
                     isSidebarOpen ? "translate-x-0" : "-translate-x-full",
                     "bg-[#0f172a] text-slate-300 border-r border-slate-800"
                 )}
@@ -242,7 +252,7 @@ export default function DashboardLayout({
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
                 {/* Header (Desktop & Mobile) */}
-                <header className="h-16 bg-white border-b sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 shadow-sm">
+                <header className="h-16 bg-white border-b sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 shadow-sm print:hidden">
                     <div className="flex items-center gap-4">
                         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                             <Menu className="h-5 w-5" />
@@ -253,9 +263,7 @@ export default function DashboardLayout({
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" className="text-slate-400 cursor-not-allowed opacity-50" title="Thông báo (Sắp ra mắt)">
-                            <Bell className="h-5 w-5" />
-                        </Button>
+                        <NotificationBell />
 
                         {/* Custom Dropdown */}
                         <div className="relative" ref={profileRef}>
