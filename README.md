@@ -8,6 +8,7 @@ The system follows a modern micro-service-ready architecture with a clear separa
 
 - **Backend**: FastAPI (Python 3.11+) - High performance, asynchronous API.
 - **Frontend Web**: Next.js 14 (React) - Server-side rendering for speed and SEO.
+- **Mobile App**: Flutter - Cross-platform mobile experience (Android/iOS).
 - **Primary Database**: MySQL 8.0 - Relational data for core business logic.
 - **Reporting Database**: PostgreSQL 15 - Optimized for analytical views and reporting.
 - **Caching & Events**: Redis 7 - Idempotency handling and temporary data.
@@ -27,7 +28,8 @@ CNPM/
 │   ├── database/       # SQL Schemas and Seed Data
 │   └── main.py         # Application Entry Point
 ├── frontend/
-│   └── web/            # Next.js Web Application (Management Portal & POS)
+│   ├── web/            # Next.js Web Application (Management Portal & POS)
+│   └── mobile/         # Flutter Mobile Application
 ├── docker-compose.yml  # System-wide orchestration
 ├── .env.example        # Template for environment variables
 └── README.md           # Documentation
@@ -61,6 +63,7 @@ CNPM/
 4. **Access the Applications**
    - **Management Portal (Web)**: [http://localhost:3000](http://localhost:3000)
    - **Backend API Docs**: [http://localhost:8080/docs](http://localhost:8080/docs)
+   - **Mobile App**: Follow Flutter build instructions in `frontend/mobile/README.md`.
 
 ## 👥 Default Demo Accounts
 
