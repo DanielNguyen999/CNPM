@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ordersApi } from '@/lib/api/orders';
 import { Button } from '@/components/ui/button';
@@ -23,16 +24,21 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Plus, ShoppingCart, Calendar, ArrowRight, Loader2, Search } from 'lucide-react';
+import { Plus, ShoppingCart, Calendar, ArrowRight, Loader2, Search, Printer } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { OrderDetailDialog } from '@/components/orders/OrderDetailDialog';
+import { InvoicePrinter } from '@/components/pos/InvoicePrinter';
+
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [selectedOrder, setSelectedOrder] = React.useState<any>(null);
+  const [printOrder, setPrintOrder] = React.useState<any>(null);
+
 
   // Debounce search
   React.useEffect(() => {
@@ -40,10 +46,12 @@ export default function OrdersPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: ordersData, isLoading } = useQuery({
     queryKey: ['orders', debouncedSearch],
-    queryFn: () => ordersApi.listOrders(0, 50, debouncedSearch),
+    queryFn: () => ordersApi.listOrders(1, 50, debouncedSearch),
   });
+
+  const orders = ordersData?.items || [];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -164,10 +172,25 @@ export default function OrdersPage() {
                       {getStatusBadge(order.payment_status)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="hover:text-indigo-600 hover:bg-indigo-50">
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 text-slate-500 hover:text-indigo-600 hover:border-indigo-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/dashboard/orders/${order.id || order.order_id}/print`);
+                          }}
+                          title="In hóa đơn"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-indigo-600 hover:bg-indigo-50">
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
+
                   </TableRow>
                 ))
               ) : (
@@ -193,6 +216,13 @@ export default function OrdersPage() {
         open={!!selectedOrder}
         onOpenChange={(open) => !open && setSelectedOrder(null)}
       />
+
+      <InvoicePrinter
+        order={printOrder}
+        autoPrint={!!printOrder}
+        onAfterPrint={() => setPrintOrder(null)}
+      />
     </div>
+
   );
 }

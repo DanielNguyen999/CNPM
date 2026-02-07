@@ -143,6 +143,11 @@ export const DraftReview = ({ draft, onUpdate }: DraftReviewProps) => {
                                 placeholder="Tên khách hàng..."
                                 className={!editedData.customer?.name ? "border-rose-300 bg-rose-50 ring-1 ring-rose-200" : ""}
                             />
+                            {editedData.customer?.name && !editedData.customer?.id && editedData.customer?.name.toLowerCase() !== 'khách lẻ' && (
+                                <p className="text-[10px] text-amber-600 font-bold bg-amber-50 p-1 rounded border border-amber-100 mt-1 flex items-center gap-1">
+                                    ✨ Khách hàng mới! Hệ thống sẽ tự động lưu vào danh bạ.
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-muted-foreground uppercase">Số điện thoại</label>

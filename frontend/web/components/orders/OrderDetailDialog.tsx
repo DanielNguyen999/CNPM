@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Printer } from "lucide-react";
 import { useState } from "react";
-import { InvoicePrinter } from "@/components/pos/InvoicePrinter";
+import { useRouter } from "next/navigation";
 
 interface OrderDetailDialogProps {
     order: any;
@@ -22,12 +22,12 @@ interface OrderDetailDialogProps {
 }
 
 export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDialogProps) {
-    const [printOrder, setPrintOrder] = useState<any>(null);
+    const router = useRouter();
 
     if (!order) return null;
 
     const handlePrint = () => {
-        setPrintOrder(order);
+        router.push(`/dashboard/orders/${order.id || order.order_id}/print`);
     };
 
     return (
@@ -98,12 +98,6 @@ export function OrderDetailDialog({ order, open, onOpenChange }: OrderDetailDial
                     </div>
                 </DialogContent>
             </Dialog>
-
-            <InvoicePrinter
-                order={printOrder}
-                autoPrint={!!printOrder}
-                onAfterPrint={() => setPrintOrder(null)}
-            />
         </>
     );
 }

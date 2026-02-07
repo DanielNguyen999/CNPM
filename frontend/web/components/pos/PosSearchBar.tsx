@@ -155,22 +155,31 @@ export const PosSearchBar = () => {
                                 onClick={() => handleSelect(product)}
                                 onMouseEnter={() => setSelectedIndex(index)}
                             >
-                                <div className="flex flex-col">
-                                    <span className="font-medium">{product.name}</span>
-                                    <span className={cn(
-                                        "text-xs",
-                                        selectedIndex === index ? "text-indigo-100" : "text-muted-foreground"
-                                    )}>
-                                        {product.product_code}
-                                    </span>
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 flex-shrink-0 rounded-md bg-slate-100 border overflow-hidden flex items-center justify-center">
+                                        {product.image_url ? (
+                                            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <div className="text-[10px] text-slate-400 font-bold">SP</div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">{product.name}</span>
+                                        <span className={cn(
+                                            "text-xs",
+                                            selectedIndex === index ? "text-indigo-100" : "text-muted-foreground"
+                                        )}>
+                                            {product.product_code}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end">
-                                    <span className="font-semibold">
+                                    <span className="font-semibold text-base">
                                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.base_price)}
                                     </span>
                                     <span className={cn(
-                                        "text-[10px]",
-                                        selectedIndex === index ? "text-indigo-100" : "text-muted-foreground"
+                                        "text-[10px] font-bold",
+                                        selectedIndex === index ? "text-indigo-100" : "text-slate-400"
                                     )}>
                                         Tồn: {product.available_quantity || 0}
                                     </span>
@@ -179,6 +188,7 @@ export const PosSearchBar = () => {
                         ))}
                     </div>
                 </div>
+
             )}
 
             {isOpen && query.length > 1 && results.length === 0 && !isLoading && (

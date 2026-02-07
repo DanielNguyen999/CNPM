@@ -60,22 +60,41 @@ export function PaymentDialog({ debt, isOpen, onClose }: PaymentDialogProps) {
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        // Remove all non-digit characters
-        const numericValue = value.replace(/\D/g, '');
-
-        if (numericValue === '') {
-            setAmount('');
-            setDisplayAmount('');
+        if (value === "") {
+            setAmount("");
+            setDisplayAmount("");
             return;
         }
 
-        // Store raw number
-        setAmount(numericValue);
+        // Loại bỏ mọi ký tự không phải số, dấu chấm, dấu phẩy
+        // Giữ lại dấu chấm/phẩy cuối cùng nếu người dùng đang gõ dở (vd: "100.")
+        const cleanValue = value.replace(/[^0-9.,]/g, "");
+        const normalized = cleanValue.replace(",", ".");
 
-        // Format with dots for display
-        const formatted = Number(numericValue).toLocaleString('vi-VN');
-        setDisplayAmount(formatted);
+        // Kiểm tra xem có hợp lệ không (chỉ tối đa 1 dấu chấm)
+        if ((normalized.match(/\./g) || []).length <= 1) {
+            setAmount(normalized);
+
+            // Format hiển thị: Nếu kết thúc bằng . hoặc mang tính chất gõ dở thì giữ nguyên
+            // Nếu là số hoàn chỉnh thì format có dấu chấm ngăn cách hàng nghìn
+            if (normalized.endsWith(".") || normalized.includes(".")) {
+                setDisplayAmount(cleanValue);
+            } else {
+                const num = parseInt(normalized);
+                if (!isNaN(num)) {
+                    setDisplayAmount(num.toLocaleString("vi-VN").replace(/\./g, ","));
+                    // Chú ý: vi-VN dùng dấu chấm ngăn nghìn, dấu phẩy ngăn thập phân. 
+                    // Nhưng người dùng muốn gõ 10.000 (dấu chấm) cho nghìn?
+                    // Ở VN: 10.000.000đ (dấu chấm ngăn nghìn).
+                    setDisplayAmount(num.toLocaleString("vi-VN"));
+                } else {
+                    setDisplayAmount(cleanValue);
+                }
+            }
+        }
     };
+
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -119,13 +138,14 @@ export function PaymentDialog({ debt, isOpen, onClose }: PaymentDialogProps) {
                                 type="text"
                                 value={displayAmount}
                                 onChange={handleAmountChange}
-                                placeholder="VD: 1.000.000"
+                                placeholder="VD: 1000.5"
                                 autoFocus
                                 required
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">đ</span>
                         </div>
-                        <p className="text-xs text-slate-500">Nhập số tiền, hệ thống sẽ tự động format</p>
+                        <p className="text-xs text-slate-500">Có thể nhập số lẻ (dùng dấu chấm . hoặc dấu phẩy ,)</p>
+
                     </div>
                     <div className="space-y-2">
                         <Label>Phương thức</Label>

@@ -7,49 +7,38 @@ from decimal import Decimal
 
 from domain.entities.draft_order import DraftOrder, DraftOrderSource, DraftOrderStatus
 from domain.repositories.draft_order_repository import DraftOrderRepository
+from domain.repositories.product_repository import ProductRepository
+from domain.repositories.customer_repository import CustomerRepository
 from infrastructure.ai.llm_provider import LLMProvider
 
 
 class CreateDraftOrderFromAIUseCase:
     """
     Use case for creating draft orders from AI-parsed natural language.
-    
-    Business Flow:
-    1. Parse user input via LLM
-    2. Validate confidence score
-    3. Create draft order
-    4. Create notification for user
-    5. Return draft order
     """
     
     def __init__(
         self,
         draft_repo: DraftOrderRepository,
+        product_repo: ProductRepository,
+        customer_repo: CustomerRepository,
         llm_provider: LLMProvider
     ):
         self.draft_repo = draft_repo
+        self.product_repo = product_repo
+        self.customer_repo = customer_repo
         self.llm_provider = llm_provider
     
     async def execute(
         self,
         owner_id: int,
         user_input: str,
-        source: str,  # "AI_TEXT" or "AI_VOICE"
+        source: str,
         created_by: int,
         context: Dict[str, Any] = None
     ) -> DraftOrder:
         """
         Execute draft order creation from AI.
-        
-        Args:
-            owner_id: Owner ID (tenant)
-            user_input: Vietnamese natural language input
-            source: Input source (AI_TEXT or AI_VOICE)
-            created_by: User ID receiving the draft
-            context: Optional context (products, customers, etc.)
-        
-        Returns:
-            Created DraftOrder
         """
         
         # 1. Parse input via LLM
@@ -61,7 +50,36 @@ class CreateDraftOrderFromAIUseCase:
             context=context
         )
         
-        # 2. Extract confidence and validation
+        # 2. Resolve customer from database if not identified by ID
+        customer_data = parsed_data.get("customer", {})
+        customer_name = customer_data.get("name")
+        if customer_name and not customer_data.get("id"):
+            customers = await self.customer_repo.search_by_name_or_phone(customer_name, owner_id, limit=1)
+            if customers:
+                customer_data["id"] = customers[0].id
+                # Update with formal name from DB if matched
+                customer_data["name"] = customers[0].full_name
+                customer_data["phone"] = customers[0].phone or customer_data.get("phone", "")
+
+        # 3. Resolve unit prices from database if they are 0
+        items = parsed_data.get("items", [])
+        for item in items:
+            product_name = item.get("product_name")
+            current_price = item.get("unit_price", 0)
+            
+            if (not current_price or current_price == 0) and product_name:
+                # Try to find product by name to get the actual price
+                products = await self.product_repo.search_by_name(product_name, owner_id, limit=1)
+                if products:
+                    product = products[0]
+                    item["unit_price"] = float(product.base_price)
+                    # Also try to map product_id if possible
+                    item["product_id"] = product.id
+                    if not item.get("unit_name") and product.base_unit_id:
+                         # We could resolve unit name here but let's keep it simple
+                         pass
+
+        # 3. Extract confidence and validation
         confidence = Decimal(str(parsed_data.get("confidence", 0)))
         missing_fields = parsed_data.get("missing_fields", [])
         questions = parsed_data.get("questions", [])

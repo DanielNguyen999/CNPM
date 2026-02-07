@@ -11,15 +11,30 @@ import {
     ShoppingCart,
     ArrowLeft,
     Clock,
-    CreditCard
+    CreditCard,
+    Printer,
+    Pencil,
+    Save,
+    X
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -38,11 +53,25 @@ import {
 } from "@/components/ui/table";
 
 import apiClient from "@/lib/apiClient";
+import { InvoicePrinter } from "@/components/pos/InvoicePrinter";
 
 export default function CustomerDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
     const customerId = params.id;
+    const [orderToPrint, setOrderToPrint] = useState<any>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editForm, setEditForm] = useState({
+        full_name: "",
+        phone: "",
+        email: "",
+        address: "",
+        credit_limit: 0,
+        customer_code: "",
+        customer_type: "INDIVIDUAL"
+    });
 
     const { data: customer, isLoading: customerLoading } = useQuery({
         queryKey: ["customers", customerId],
@@ -52,14 +81,16 @@ export default function CustomerDetailPage() {
         },
     });
 
-    const { data: orders, isLoading: ordersLoading } = useQuery({
+    const { data: ordersResponse, isLoading: ordersLoading } = useQuery({
         queryKey: ["customers", customerId, "orders"],
         queryFn: async () => {
-            const { data } = await apiClient.get("/orders", { params: { customer_id: customerId } });
+            const { data } = await apiClient.get("/orders", { params: { customer_id: customerId, page: 1, page_size: 100 } });
             return data;
         },
         enabled: !!customer,
     });
+
+    const orders = ordersResponse?.items || [];
 
     const { data: debts, isLoading: debtsLoading } = useQuery({
         queryKey: ["customers", customerId, "debts"],
@@ -69,6 +100,54 @@ export default function CustomerDetailPage() {
         },
         enabled: !!customer,
     });
+
+    useEffect(() => {
+        if (customer) {
+            setEditForm({
+                full_name: customer.full_name || "",
+                phone: customer.phone || "",
+                email: customer.email || "",
+                address: customer.address || "",
+                credit_limit: customer.credit_limit || 0,
+                customer_code: customer.customer_code || "",
+                customer_type: customer.customer_type || "INDIVIDUAL"
+            });
+        }
+    }, [customer]);
+
+    const updateCustomerMutation = useMutation({
+        mutationFn: async (updatedData: any) => {
+            const { data } = await apiClient.put(`/customers/${customerId}`, updatedData);
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["customers", customerId] });
+            toast({
+                title: "Thành công",
+                description: "Đã cập nhật thông tin khách hàng",
+            });
+            setIsEditDialogOpen(false);
+        },
+        onError: (error: any) => {
+            const errorDetail = error?.response?.data?.detail;
+            const message = typeof errorDetail === 'string'
+                ? errorDetail
+                : typeof errorDetail === 'object'
+                    ? JSON.stringify(errorDetail)
+                    : "Không thể cập nhật thông tin";
+
+            toast({
+                title: "Lỗi",
+                description: message,
+                variant: "destructive",
+            });
+        }
+    });
+
+    const handleUpdateCustomer = (e: React.FormEvent) => {
+        e.preventDefault();
+        updateCustomerMutation.mutate(editForm);
+    };
 
     if (customerLoading) {
         return (
@@ -173,8 +252,16 @@ export default function CustomerDetailPage() {
                 {/* Info Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
                     <Card className="border shadow-sm overflow-hidden text-sm">
-                        <CardHeader className="bg-slate-50 border-b py-3">
+                        <CardHeader className="bg-slate-50 border-b py-3 flex flex-row items-center justify-between space-y-0">
                             <CardTitle className="text-sm font-bold text-slate-700">Thông tin liên hệ</CardTitle>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                onClick={() => setIsEditDialogOpen(true)}
+                            >
+                                <Pencil className="h-3.5 w-3.5" />
+                            </Button>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
                             <div className="flex items-start gap-3">
@@ -251,9 +338,24 @@ export default function CustomerDetailPage() {
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/orders/${order.id}`)}>
-                                                            Xem
-                                                        </Button>
+                                                        <div className="flex gap-2 justify-end">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={async () => {
+                                                                    // Fetch full order details for printing
+                                                                    const { data } = await apiClient.get(`/orders/${order.id}`);
+                                                                    setOrderToPrint(data);
+                                                                }}
+                                                                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                                            >
+                                                                <Printer className="h-4 w-4 mr-1" />
+                                                                In
+                                                            </Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/orders/${order.id}`)}>
+                                                                Xem
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             ))
@@ -324,6 +426,77 @@ export default function CustomerDetailPage() {
                     </Tabs>
                 </div>
             </div>
+
+            {/* Invoice Printer */}
+            {orderToPrint && (
+                <InvoicePrinter
+                    order={orderToPrint}
+                    onAfterPrint={() => setOrderToPrint(null)}
+                    autoPrint={true}
+                />
+            )}
+
+            {/* Edit Customer Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Chỉnh sửa thông tin khách hàng</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleUpdateCustomer} className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="full_name">Họ và tên</Label>
+                            <Input
+                                id="full_name"
+                                value={editForm.full_name}
+                                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Số điện thoại</Label>
+                            <Input
+                                id="phone"
+                                value={editForm.phone}
+                                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={editForm.email}
+                                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="address">Địa chỉ</Label>
+                            <Input
+                                id="address"
+                                value={editForm.address}
+                                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="credit_limit">Hạn mức nợ (VNĐ)</Label>
+                            <Input
+                                id="credit_limit"
+                                type="number"
+                                value={editForm.credit_limit}
+                                onChange={(e) => setEditForm({ ...editForm, credit_limit: Number(e.target.value) })}
+                            />
+                        </div>
+                        <DialogFooter className="pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                                Hủy
+                            </Button>
+                            <Button type="submit" disabled={updateCustomerMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700">
+                                {updateCustomerMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -7,8 +7,10 @@ export interface DebtSummary {
     customer_name?: string;
     customer_phone?: string;
     order_code?: string;
-    total_amount: number;
+    debt_amount: number;
+    total_amount?: number;
     paid_amount: number;
+
     remaining_amount: number;
     status: string;
     due_date?: string;

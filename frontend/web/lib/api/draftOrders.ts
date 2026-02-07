@@ -2,7 +2,10 @@ import apiClient from '../apiClient';
 
 export const draftOrdersApi = {
     aiParse: async (text: string) => {
-        const { data } = await apiClient.post('/ai/parse', { user_input: text });
+        const { data } = await apiClient.post('/ai/parse', {
+            user_input: text,
+            source: 'AI_TEXT'
+        });
         return data;
     },
     listDrafts: async (skip = 0, limit = 100) => {

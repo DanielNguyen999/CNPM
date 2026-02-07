@@ -284,7 +284,8 @@ class Product(Base):
     cost_price = Column(Numeric(15, 2))
     
     barcode = Column(String(100), index=True)
-    image_url = Column(String(500))
+    image_url = Column(Text)
+
 
     is_active = Column(Boolean, default=True, nullable=False)
 
@@ -552,3 +553,12 @@ class EmployeePermission(Base):
     __table_args__ = (
         Index("idx_emp_perm_key", "employee_id", "permission_key", unique=True),
     )
+
+
+class SystemConfig(Base):
+    __tablename__ = "SYSTEM_CONFIG"
+    
+    key = Column(String(50), primary_key=True)
+    value = Column(Text, nullable=False)
+    description = Column(String(255))
+    updated_at = Column(DateTime, default=get_vietnam_time, onupdate=get_vietnam_time, nullable=False)

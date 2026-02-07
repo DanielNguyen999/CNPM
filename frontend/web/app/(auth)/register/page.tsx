@@ -27,16 +27,7 @@ const registerSchema = z.object({
     full_name: z.string().min(2, "Họ tên quá ngắn"),
     email: z.string().email("Email không hợp lệ"),
     password: z.string().min(6, "Mật khẩu ít nhất 6 ký tự"),
-    role: z.enum(["OWNER", "CUSTOMER"]).default("OWNER"),
-    business_name: z.string().optional(),
-}).refine((data) => {
-    if (data.role === "OWNER" && (!data.business_name || data.business_name.length < 2)) {
-        return false;
-    }
-    return true;
-}, {
-    message: "Tên kinh doanh quá ngắn",
-    path: ["business_name"],
+    business_name: z.string().min(2, "Tên kinh doanh quá ngắn"),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -50,25 +41,20 @@ export default function RegisterPage() {
     const {
         register,
         handleSubmit,
-        setValue,
-        watch,
         formState: { errors },
     } = useForm<RegisterFormValues>({
         resolver: zodResolver(registerSchema),
-        defaultValues: {
-            role: "OWNER",
-        }
     });
-
-    const role = watch("role");
 
     const onSubmit = async (data: RegisterFormValues) => {
         setIsLoading(true);
         setError(null);
 
         try {
-            const endpoint = data.role === "OWNER" ? "/auth/register" : "/auth/register/customer";
-            const response = await api.post(endpoint, data);
+            const response = await api.post("/auth/register", {
+                ...data,
+                role: "OWNER"
+            });
             const { access_token, user_id, email, role, owner_id } = response.data;
 
             login({ id: user_id, email, role, owner_id, full_name: data.full_name }, access_token);
@@ -109,29 +95,6 @@ export default function RegisterPage() {
                                 </div>
                             )}
 
-                            <div className="flex p-1 bg-slate-100 rounded-2xl mb-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setValue("role", "OWNER")}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl transition-all",
-                                        role === "OWNER" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                                    )}
-                                >
-                                    <Building2 className="h-4 w-4" /> Chủ cửa hàng
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setValue("role", "CUSTOMER")}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl transition-all",
-                                        role === "CUSTOMER" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                                    )}
-                                >
-                                    <User className="h-4 w-4" /> Khách hàng
-                                </button>
-                            </div>
-
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-black text-slate-700 uppercase tracking-wider ml-1">Họ và tên</Label>
                                 <div className="relative">
@@ -145,20 +108,18 @@ export default function RegisterPage() {
                                 {errors.full_name && <p className="text-[10px] text-rose-500 font-bold ml-1">{errors.full_name.message}</p>}
                             </div>
 
-                            {role === "OWNER" && (
-                                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <Label className="text-xs font-black text-slate-700 uppercase tracking-wider ml-1">Tên cửa hàng / Hộ kinh doanh</Label>
-                                    <div className="relative">
-                                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                        <Input
-                                            {...register("business_name")}
-                                            placeholder="BizFlow Shop"
-                                            className={cn("h-12 pl-11 rounded-xl bg-slate-50/50 border-slate-200", errors.business_name && "border-rose-500")}
-                                        />
-                                    </div>
-                                    {errors.business_name && <p className="text-[10px] text-rose-500 font-bold ml-1">{errors.business_name.message}</p>}
+                            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <Label className="text-xs font-black text-slate-700 uppercase tracking-wider ml-1">Tên cửa hàng / Hộ kinh doanh</Label>
+                                <div className="relative">
+                                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <Input
+                                        {...register("business_name")}
+                                        placeholder="BizFlow Shop"
+                                        className={cn("h-12 pl-11 rounded-xl bg-slate-50/50 border-slate-200", errors.business_name && "border-rose-500")}
+                                    />
                                 </div>
-                            )}
+                                {errors.business_name && <p className="text-[10px] text-rose-500 font-bold ml-1">{errors.business_name.message}</p>}
+                            </div>
 
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-black text-slate-700 uppercase tracking-wider ml-1">Email</Label>

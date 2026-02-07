@@ -51,9 +51,24 @@ export function StockAdjustment({ isOpen, onClose, product, canDoAdjustment = tr
         },
     });
 
+    const formatNumber = (val: string) => {
+        // Gỡ bỏ mọi thứ không phải là số
+        const digits = val.replace(/\D/g, "");
+        // Thêm dấu chấm mỗi 3 chữ số
+        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    };
+
+    const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const formatted = formatNumber(e.target.value);
+        setQuantityChange(formatted);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        let qty = parseFloat(quantityChange);
+        // Gỡ bỏ dấu chấm trước khi parse
+        const cleanValue = quantityChange.replace(/\./g, "");
+        let qty = parseInt(cleanValue, 10);
+
         if (isNaN(qty)) return;
 
         if (type === "EXPORT") {
@@ -113,11 +128,12 @@ export function StockAdjustment({ isOpen, onClose, product, canDoAdjustment = tr
                         <Label htmlFor="quantity_change">Số lượng {type === 'EXPORT' ? '(sẽ trừ)' : type === 'IMPORT' ? '(sẽ cộng)' : '(+/-)'}</Label>
                         <Input
                             id="quantity_change"
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            inputMode="numeric"
                             value={quantityChange}
-                            onChange={(e) => setQuantityChange(e.target.value)}
-                            placeholder="0.00"
+                            onChange={handleQuantityChange}
+                            placeholder="0"
+                            className="text-lg font-bold"
                             required
                         />
                     </div>

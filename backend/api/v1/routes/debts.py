@@ -121,8 +121,12 @@ async def record_payment(
             created_by=current_user.user_id
         )
         
+        # COMMIT the transaction! This was missing.
+        db.commit()
+        
         # Return updated detail
         updated_detail = await debt_repo.get_debt_detail(debt_id, current_user.owner_id)
+
         
         # Trigger real-time UI update via SSE
         if updated_detail:

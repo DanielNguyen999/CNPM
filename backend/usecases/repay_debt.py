@@ -68,15 +68,9 @@ class RepayDebtUseCase:
         if debt.is_fully_paid():
             raise ValueError(f"Debt {debt_id} is already fully paid")
         
-        # 2. Validate payment amount
-        remaining = debt.get_remaining_amount()
-        if payment_amount > remaining:
-            raise ValueError(
-                f"Payment amount {payment_amount} exceeds remaining debt {remaining}"
-            )
-        
         if payment_amount <= 0:
-            raise ValueError("Payment amount must be greater than 0")
+            raise ValueError("Số tiền thanh toán phải lớn hơn 0")
+
         
         # 3. Create payment record
         payment = DebtPayment(

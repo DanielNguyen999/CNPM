@@ -79,15 +79,35 @@ class SQLAlchemyInventoryRepository(InventoryRepository):
         return self._to_entity(inventory_model)
     
     async def list_low_stock(self, owner_id: int) -> List[InventoryEntity]:
-        """List products with low stock"""
-        inventory_models = self.session.query(InventoryModel).filter(
+        """List products with low stock (with product details)"""
+        from infrastructure.database.models import Unit as UnitModel
+        
+        results = self.session.query(
+            InventoryModel, 
+            ProductModel.name, 
+            ProductModel.product_code, 
+            UnitModel.name.label("unit_name")
+        ).join(
+            ProductModel, InventoryModel.product_id == ProductModel.id
+        ).outerjoin(
+            UnitModel, ProductModel.base_unit_id == UnitModel.id
+        ).filter(
             and_(
                 InventoryModel.owner_id == owner_id,
                 InventoryModel.available_quantity <= InventoryModel.low_stock_threshold
             )
         ).all()
         
-        return [self._to_entity(inv) for inv in inventory_models]
+        entities = []
+        for inv_model, name, code, unit_name in results:
+            entity = self._to_entity(inv_model)
+            entity.product_name = name
+            entity.product_code = code
+            entity.unit_name = unit_name or ""
+            entities.append(entity)
+            
+        return entities
+
     
     async def list_by_owner(self, owner_id: int, skip: int = 0, limit: int = 100) -> List[InventoryEntity]:
         """List inventory for owner with product details"""

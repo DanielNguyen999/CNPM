@@ -19,9 +19,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { ImageIcon } from "lucide-react";
 import apiClient from "@/lib/apiClient";
+
 import { unitsApi } from "@/lib/api/units";
 import { productsApi } from "@/lib/api/products";
+
+import { notifications } from "@/lib/notifications";
 
 /**
  * Product Form Modal Component
@@ -89,21 +93,62 @@ export function ProductForm({ isOpen, onClose, product }: ProductFormProps) {
                 return productsApi.create(data);
             }
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["products"] });
+        onSuccess: async () => {
+            // Close immediately for better UX
             onClose();
+
+            // Notify user
+            notifications.success(
+                isEdit ? "Đã cập nhật" : "Đã tạo",
+                `Sản phẩm "${formData.name}" đã được lưu thành công.`
+            );
+
+            // Wait a bit for DB consistency then refetch
+            setTimeout(async () => {
+                await queryClient.refetchQueries({ queryKey: ["products"], type: 'active' });
+                await queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
+            }, 500);
         },
+        onError: (error: any) => {
+            console.error("Product save error:", error);
+            const detail = error.response?.data?.detail;
+            notifications.error(
+                "Lỗi lưu sản phẩm",
+                detail || "Đã có lỗi xảy ra khi lưu thông tin. Vui lòng kiểm tra lại các trường nhập liệu."
+            );
+        }
     });
+
+    const isGoogleLink = (url: string) => url.includes("google.com/imgres") || url.includes("images.app.goo.gl");
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        mutation.mutate({
+
+        // Basic validation
+        if (!formData.base_unit_id || formData.base_unit_id === "0") {
+            notifications.error("Thiếu thông tin", "Vui lòng chọn đơn vị tính cho sản phẩm.");
+            return;
+        }
+
+        // Smart link check
+        if (formData.image_url && isGoogleLink(formData.image_url)) {
+            notifications.warning(
+                "Link ảnh không hợp lệ",
+                "Anh đang dán link tìm kiếm của Google. Hãy chuột phải vào ảnh -> 'Sao chép địa chỉ hình ảnh' để lấy link trực tiếp nhé!"
+            );
+            // We still proceed but warn them
+        }
+
+        const payload = {
             ...formData,
             base_unit_id: parseInt(formData.base_unit_id),
-            base_price: parseFloat(formData.base_price),
+            base_price: parseFloat(formData.base_price) || 0,
             cost_price: formData.cost_price ? parseFloat(formData.cost_price) : undefined,
-        });
+        };
+
+        mutation.mutate(payload);
     };
+
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -184,29 +229,63 @@ export function ProductForm({ isOpen, onClose, product }: ProductFormProps) {
                         />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                         <Label htmlFor="image_url">Link hình ảnh (URL)</Label>
-                        <Input
-                            id="image_url"
-                            value={formData.image_url}
-                            onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                            placeholder="https://example.com/image.jpg"
-                        />
+                        <div className="flex gap-4 items-start">
+                            <div className="flex-1 space-y-2">
+                                <Input
+                                    id="image_url"
+                                    value={formData.image_url}
+                                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                                    placeholder="https://example.com/image.jpg"
+                                    className="bg-slate-50 border-slate-200"
+                                />
+                                <p className="text-[10px] text-slate-400 italic">Dán link ảnh từ Google, Facebook hoặc kho ảnh của bạn.</p>
+                            </div>
+                            <div className="h-20 w-20 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0 group relative">
+                                {formData.image_url ? (
+                                    <img
+                                        src={formData.image_url}
+                                        alt="Preview"
+                                        className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = 'https://placehold.co/400x400?text=Loi+Anh';
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center gap-1 opacity-40">
+                                        <ImageIcon className="h-6 w-6" />
+                                        <span className="text-[8px] font-bold uppercase">No Image</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Mô tả</Label>
+                        <Label htmlFor="description">Mô tả sản phẩm (Tùy chọn)</Label>
                         <Input
                             id="description"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            placeholder="Mô tả ngắn về sản phẩm..."
+                            className="bg-slate-50 border-slate-200"
                         />
                     </div>
 
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose}>Hủy</Button>
-                        <Button type="submit" disabled={mutation.isPending}>
-                            {mutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+                    <DialogFooter className="pt-4 border-t mt-4">
+                        <Button type="button" variant="ghost" onClick={onClose} className="text-slate-500 hover:text-slate-700">Hủy</Button>
+                        <Button
+                            type="submit"
+                            disabled={mutation.isPending}
+                            className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 min-w-[120px]"
+                        >
+                            {mutation.isPending ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>Đang lưu...</span>
+                                </div>
+                            ) : isEdit ? "Cập nhật sản phẩm" : "Thêm sản phẩm mới"}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -214,3 +293,4 @@ export function ProductForm({ isOpen, onClose, product }: ProductFormProps) {
         </Dialog>
     );
 }
+

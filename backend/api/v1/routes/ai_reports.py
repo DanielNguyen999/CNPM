@@ -113,9 +113,9 @@ async def get_inventory_forecast(
     
     # 3. Enrich with product names
     from infrastructure.database.models import Product
-    product_names = {{
+    product_names = {
         p.id: p.name for p in db.query(Product).filter(Product.owner_id == owner_id).all()
-    }}
+    }
     
     for p in predictions:
         p["product_name"] = product_names.get(p["product_id"], "Sản phẩm ẩn")

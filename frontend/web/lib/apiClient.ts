@@ -31,16 +31,19 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+let isRedirecting = false;
+
 // Response Interceptor: Handle Auth Errors
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-
     // Only handle auth errors if we have a response
     if (error.response?.status === 401) {
       // 401 means token is invalid or missing - this is a real auth failure
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        if (isRedirecting) return Promise.reject(error);
+
+        isRedirecting = true;
         console.warn('Token không hợp lệ hoặc đã hết hạn. Đang đăng xuất...');
 
         // Dispatch event for UI to show toast if needed
@@ -48,15 +51,23 @@ apiClient.interceptors.response.use(
           detail: { message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' }
         }));
 
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('bizflow-auth');
+        // Access store and logout
+        try {
+          const { useAuthStore } = await import('@/store/useAuthStore');
+          useAuthStore.getState().logout();
+        } catch (e) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('bizflow-auth');
+        }
 
         // Redirect to login
         setTimeout(() => {
+          isRedirecting = false;
           window.location.href = '/login?error=session_expired';
-        }, 1000);
+        }, 500);
       }
-    } else if (error.response?.status === 403) {
+    }
+    else if (error.response?.status === 403) {
       // 403 means user is authenticated but not authorized for this resource
       // This is NOT a session expiry - just show error, don't logout
       console.warn('Không có quyền truy cập tài nguyên này:', error.config.url);

@@ -27,8 +27,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 const customerSchema = z.object({
     customer_code: z.string().default("AUTO"),
     full_name: z.string().min(2, "Tên phải ít nhất 2 ký tự"),
-    phone: z.string().optional(),
-    email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
+    phone: z.string().min(10, "Số điện thoại phải ít nhất 10 số"),
+    email: z.string().email("Email không hợp lệ"),
     address: z.string().optional(),
     customer_type: z.string().default("INDIVIDUAL"),
     tax_code: z.string().optional(),
@@ -99,9 +99,21 @@ export default function CustomerFormModal({
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["customers"] });
             if (isEdit) queryClient.invalidateQueries({ queryKey: ["customer", customer?.id] });
+
+            const { notifications } = require("@/lib/notifications");
+            notifications.success(
+                "Thành công",
+                isEdit ? "Đã cập nhật thông tin khách hàng" : "Đã thêm khách hàng mới"
+            );
+
             onClose();
             form.reset();
         },
+        onError: (error: any) => {
+            const { notifications } = require("@/lib/notifications");
+            const errorMsg = error.response?.data?.detail || "Có lỗi xảy ra. Vui lòng thử lại.";
+            notifications.error("Lỗi", errorMsg);
+        }
     });
 
     const onSubmit = (values: CustomerFormValues) => {
@@ -153,12 +165,18 @@ export default function CustomerFormModal({
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="phone">Số điện thoại</Label>
+                            <Label htmlFor="phone">Số điện thoại <span className="text-red-500">*</span></Label>
                             <Input id="phone" placeholder="090..." {...form.register("phone")} />
+                            {form.formState.errors.phone && (
+                                <p className="text-xs text-red-500">{form.formState.errors.phone.message}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                             <Input id="email" type="email" placeholder="abc@gmail.com" {...form.register("email")} />
+                            {form.formState.errors.email && (
+                                <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
+                            )}
                         </div>
                     </div>
 

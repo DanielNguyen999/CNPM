@@ -45,12 +45,18 @@ async def list_inventory(
     for item in inventory:
         resp = InventoryResponse.from_orm(item)
         # Manually populate from loaded product relationship if available
-        # The repo must ensure eager loading or we risk N+1
         if hasattr(item, 'product') and item.product:
             resp.product_name = item.product.name
             resp.product_code = item.product.product_code
-            # unit name requires unit lookup or product.base_unit_id join
-            # For now simplified
+        
+        # Populate from dynamic attributes attached by repo
+        if hasattr(item, 'product_name'):
+             resp.product_name = item.product_name
+        if hasattr(item, 'product_code'):
+             resp.product_code = item.product_code
+        if hasattr(item, 'unit_name'):
+             resp.unit_name = item.unit_name
+             
         results.append(resp)
         
     return results

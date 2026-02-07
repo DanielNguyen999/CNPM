@@ -13,7 +13,7 @@ from infrastructure.database.inventory_repository_impl import SQLAlchemyInventor
 from infrastructure.database.debt_repository_impl import SQLAlchemyDebtRepository
 
 from infrastructure.database.product_repository_impl import SQLAlchemyProductRepository
-from api.schemas import OrderCreate, OrderResponse, OrderItemResponse
+from api.schemas import OrderCreate, OrderResponse, OrderItemResponse, PaginatedResponse
 from api.v1.auth.dependencies import CurrentUser, get_current_user, require_role
 from api.v1.auth.permissions import require_permission
 from usecases.create_order import CreateOrderUseCase
@@ -194,10 +194,10 @@ async def get_order(
     )
 
 
-@router.get("", response_model=List[OrderResponse])
+@router.get("", response_model=PaginatedResponse)
 async def list_orders(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=100),
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     search: Optional[str] = None,
@@ -206,7 +206,7 @@ async def list_orders(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List orders for current user's owner with filters"""
+    """List orders for current user's owner with filters (Paginated)"""
     if not current_user.owner_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -214,19 +214,20 @@ async def list_orders(
         )
     
     order_repo = SQLAlchemyOrderRepository(db)
+    skip = (page - 1) * page_size
     
     # If user is CUSTOMER, force filter by their customer_id
     if current_user.role == "CUSTOMER":
         from infrastructure.database.models import Customer as CustomerModel
         customer_record = db.query(CustomerModel).filter(CustomerModel.user_id == current_user.user_id).first()
         if not customer_record:
-            return [] # Or raise error
+            return {"items": [], "total": 0, "page": page, "page_size": page_size, "total_pages": 0}
         customer_id = customer_record.id
         
     orders = await order_repo.list_by_owner(
         owner_id=current_user.owner_id,
         skip=skip,
-        limit=limit,
+        limit=page_size,
         start_date=start_date,
         end_date=end_date,
         search=search,
@@ -234,10 +235,10 @@ async def list_orders(
         customer_id=customer_id
     )
     
-    # Needs to populate customer info if missing in Order entity
-    # ... (skipping complex join population for brevity, assuming _to_entity handles basic or separate call needed)
+    # Get total count for pagination
+    total = await order_repo.count_by_owner(current_user.owner_id)
     
-    return [
+    result_items = [
         OrderResponse(
             id=order.id,
             owner_id=order.owner_id,
@@ -276,6 +277,17 @@ async def list_orders(
         )
         for order in orders
     ]
+    
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    
+    return {
+        "items": result_items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages
+    }
+
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_order(

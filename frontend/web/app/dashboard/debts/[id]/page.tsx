@@ -119,7 +119,7 @@ export default function DebtDetailPage() {
                         <CardTitle className="text-sm font-medium text-muted-foreground">Tổng khoản nợ</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(debt.total_amount)}</div>
+                        <div className="text-2xl font-bold">{formatCurrency(debt.total_amount || 0)}</div>
                         <p className="text-xs text-muted-foreground mt-1">Ngày tạo: {formatDate(debt.created_at)}</p>
                     </CardContent>
                 </Card>
@@ -128,7 +128,7 @@ export default function DebtDetailPage() {
                         <CardTitle className="text-sm font-medium text-green-700">Đã thanh toán</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{formatCurrency(debt.paid_amount)}</div>
+                        <div className="text-2xl font-bold text-green-600">{formatCurrency(debt.paid_amount || 0)}</div>
                         <div className="flex items-center mt-1 text-xs text-green-700 font-medium">
                             <Badge variant="outline" className="bg-white border-green-200 text-green-700 mr-2 capitalize">
                                 {debt.status.toLowerCase()}
@@ -141,7 +141,7 @@ export default function DebtDetailPage() {
                         <CardTitle className="text-sm font-medium text-red-700">Còn lại phải thu</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-red-600">{formatCurrency(debt.remaining_amount)}</div>
+                        <div className="text-2xl font-bold text-red-600">{formatCurrency(debt.remaining_amount || 0)}</div>
                         <div className="flex items-center mt-1 text-xs text-red-700 font-medium">
                             <Clock className="w-3.5 h-3.5 mr-1" />
                             Đáo hạn: {formatDate(debt.due_date)}

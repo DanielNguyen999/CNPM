@@ -97,6 +97,7 @@ async def confirm_draft_order(
         customer_repo=customer_repo,
         product_repo=product_repo,
         create_order_usecase=create_order_uc,
+        db=db,
     )
 
     try:

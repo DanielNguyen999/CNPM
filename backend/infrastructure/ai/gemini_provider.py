@@ -37,30 +37,45 @@ class GeminiProvider(LLMProvider):
             return {"error": "AI provider not configured"}
 
         prompt = f"""
-        Bạn là một trợ lý bán hàng chuyên nghiệp cho phần mềm BizFlow (Việt Nam).
-        Nhiệm vụ của bạn là trích xuất thông tin đơn hàng từ tin nhắn của khách hàng.
-        
-        Nội dung tin nhắn: "{user_input}"
-        
-        Ngữ cảnh cửa hàng:
-        - Danh sách sản phẩm: {context.get('products', [])}
-        - Danh sách khách hàng: {context.get('customers', [])}
-        
-        Yêu cầu trả về định dạng JSON duy nhất như sau:
-        {{
-            "customer": {{"name": "...", "phone": "..."}},
-            "items": [
-                {{"product": "tên sản phẩm", "quantity": số lượng, "unit": "đơn vị"}}
-            ],
-            "payment": {{"method": "CASH/BANK_TRANSFER", "paid_amount": số tiền}},
-            "confidence": 0.0 đến 1.0,
-            "missing_fields": ["danh sách trường thiếu"],
-            "questions": ["câu hỏi để lấy thêm thông tin"]
-        }}
-        
-        Lưu ý: 
-        1. Nếu không tìm thấy tên sản phẩm trong ngữ cảnh, hãy dùng tên người dùng nhập.
-        2. Nếu không có số lượng, mặc định là 1.
+Bạn là trợ lý AI chuyên phân tích đơn hàng bằng tiếng Việt cho phần mềm quản lý bán hàng BizFlow.
+
+NHIỆM VỤ: Trích xuất thông tin đơn hàng từ tin nhắn của khách hàng.
+
+TIN NHẮN KHÁCH HÀNG:
+"{user_input}"
+
+HƯỚNG DẪN PHÂN TÍCH:
+1. Tên khách hàng: Tìm tên người (Anh/Chị/Ông/Bà + tên).
+2. Thông tin liên hệ: Trích xuất số điện thoại (10-11 số), địa chỉ nếu có.
+3. Sản phẩm: 
+   - Trích xuất TÊN SẢN PHẨM CHÍNH XÁC. KHÔNG bao gồm số lượng và đơn vị vào tên sản phẩm.
+   - Ví dụ: "10 bao xi măng" → product_name: "Xi măng", quantity: 10, unit_name: "bao"
+4. Số lượng: Nếu không có số, mặc định là 1.
+5. Đơn vị: (bao, thùng, khối, xe, kg, tấn, cái, viên, mét, thanh, cuộn, lít...).
+6. Thanh toán & Ghi nợ: 
+   - Nếu có từ "nợ", "ghi nợ", "chưa trả tiền" → set "is_debt": true, "method": "CREDIT"
+   - Ngược lại → set "is_debt": false, "method": "CASH"
+
+VÍ DỤ PHÂN TÍCH:
+Input: "Anh Đăng sđt 0909111222 lấy 10 bao xi măng, ghi nợ nhé"
+Output: {{
+    "customer": {{"name": "Anh Đăng", "phone": "0909111222", "address": "", "email": ""}},
+    "items": [
+        {{"product_name": "Xi măng", "quantity": 10, "unit_name": "bao", "unit_price": 0}}
+    ],
+    "payment": {{"method": "CREDIT", "is_debt": true, "paid_amount": 0}},
+    "confidence": 0.98,
+    "missing_fields": ["price"],
+    "questions": []
+}}
+
+YÊU CẦU OUTPUT:
+- Chỉ trả về JSON duy nhất, không có text khác.
+- Tên sản phẩm sạch sẽ.
+- Bắt buộc trả về flag is_debt (true/false).
+
+BẮT ĐẦU PHÂN TÍCH:
+
         """
         
         try:
@@ -70,7 +85,10 @@ class GeminiProvider(LLMProvider):
             json_start = text.find('{')
             json_end = text.rfind('}') + 1
             if json_start >= 0 and json_end > json_start:
-                return json.loads(text[json_start:json_end])
+                parsed = json.loads(text[json_start:json_end])
+                logger.info(f"Gemini parsed: {parsed}")
+                return parsed
+            logger.error(f"No JSON found in response: {text}")
             return {"error": "Failed to parse AI response"}
         except Exception as e:
             logger.error(f"Gemini error: {e}")

@@ -6,10 +6,10 @@ export const ordersApi = {
         const { data } = await apiClient.post('/orders', payload, { headers });
         return data;
     },
-    listOrders: async (skip = 0, limit = 100, search = '', status = '', fromDate = '', toDate = '', customerId = '') => {
+    listOrders: async (page = 1, page_size = 100, search = '', status = '', fromDate = '', toDate = '', customerId = '') => {
         const params = new URLSearchParams({
-            skip: skip.toString(),
-            limit: limit.toString(),
+            page: page.toString(),
+            page_size: page_size.toString(),
             ...(search && { search }),
             ...(status && { status }),
             ...(fromDate && { start_date: fromDate }),

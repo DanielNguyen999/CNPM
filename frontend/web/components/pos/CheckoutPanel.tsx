@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { CreditCard, Wallet, Banknote, UserPlus, LogOut, CheckCircle2 } from 'lucide-react';
 import { usePosStore } from '@/store/posStore';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { notifications } from '@/lib/notifications';
 import { InvoicePrinter } from '@/components/pos/InvoicePrinter';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,7 +48,6 @@ export const CheckoutPanel = () => {
     const taxAmount = subtotal * (taxRate / 100);
     const total = getTotal();
 
-    const { toast } = useToast();
     const [printOrder, setPrintOrder] = useState<any>(null);
 
     const formatCurrency = (amount: number) => {
@@ -63,12 +62,11 @@ export const CheckoutPanel = () => {
         mutationFn: ({ payload, idempotencyKey }: { payload: any, idempotencyKey?: string }) =>
             ordersApi.createOrder(payload, idempotencyKey),
         onSuccess: (data) => {
-            toast({
-                title: "Tạo đơn hàng thành công",
-                description: `Mã đơn: ${data.order_code}`,
-                variant: "default",
-                className: "bg-green-50 border-green-200 text-green-900",
-            });
+            notifications.success(
+                "Đã tạo đơn hàng",
+                `Mã đơn: ${data.order_code}${isDebt ? " (Đơn ghi nợ)" : ""}`
+            );
+
             // Trigger auto print
             setPrintOrder(data);
 
@@ -86,18 +84,17 @@ export const CheckoutPanel = () => {
             }
         },
         onError: (error: any) => {
-            toast({
-                variant: "destructive",
-                title: "Lỗi tạo đơn hàng",
-                description: error.response?.data?.detail || "Vui lòng thử lại",
-            });
+            notifications.error(
+                "Lỗi tạo đơn hàng",
+                error.response?.data?.detail || "Không thể kết nối máy chủ. Vui lòng thử lại"
+            );
         }
     });
 
     const handleSubmit = async () => {
         if (items.length === 0) return;
         if (!customer) {
-            alert("Vui lòng chọn khách hàng.");
+            notifications.warning("Thông tin thiếu", "Vui lòng chọn khách hàng trước khi thanh toán.");
             return;
         }
 

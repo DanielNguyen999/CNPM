@@ -41,8 +41,10 @@ import {
 import Link from "next/link";
 import { format } from "date-fns";
 import { PaymentDialog } from "@/components/debts/PaymentDialog";
+import { useRouter } from "next/navigation";
 
 export default function DebtsPage() {
+    const router = useRouter();
     const [selectedDebt, setSelectedDebt] = useState<any>(null);
     const [status, setStatus] = useState<string>("all");
     const [sort, setSort] = useState<string>("latest");
@@ -201,7 +203,7 @@ export default function DebtsPage() {
                         ) : (
                             data?.items.map((debt) => (
                                 <TableRow key={debt.id} className="hover:bg-slate-50 transition-colors cursor-pointer"
-                                    onClick={() => window.location.href = `/dashboard/debts/${debt.id}`}>
+                                    onClick={() => router.push(`/dashboard/debts/${debt.id}`)}>
                                     <TableCell>
                                         <div className="flex items-center space-x-3">
                                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
@@ -219,11 +221,12 @@ export default function DebtsPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right font-medium">
-                                        {formatCurrency(debt.total_amount)}
+                                        {formatCurrency(Number(debt.debt_amount || debt.total_amount || 0))}
                                     </TableCell>
+
                                     <TableCell className="text-right">
                                         <div className="text-red-600 font-bold">
-                                            {formatCurrency(debt.remaining_amount)}
+                                            {formatCurrency(Number(debt.remaining_amount || 0))}
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -248,17 +251,19 @@ export default function DebtsPage() {
                                                 Thanh toán
                                             </Button>
                                         )}
-                                        <Link href={`/dashboard/debts/${debt.id}`} onClick={(e) => e.stopPropagation()}>
-                                            <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                                                <ChevronRight className="w-5 h-5" />
-                                            </Button>
-                                        </Link>
+                                        <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(`/dashboard/debts/${debt.id}`);
+                                        }}>
+                                            <ChevronRight className="w-5 h-5" />
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))
                         )}
                     </TableBody>
                 </Table>
+
 
                 {data && data.total_pages > 1 && (
                     <div className="flex items-center justify-between px-4 py-4 bg-slate-50 border-t">

@@ -22,123 +22,53 @@ class MockLLMProvider(LLMProvider):
         context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Parse Vietnamese order using simple pattern matching.
+        Parse Vietnamese order using VietnameseVoiceParser (enhanced regex logic).
         
         Supports patterns like:
-        - "Anh Minh gọi đặt 5 bao xi măng"
-        - "Chị Lan cần 10 thùng Coca, giao chiều nay"
-        - "Khách hàng ABC đặt 20 viên gạch Đồng Tâm"
+        - "Anh Minh đặt 2 bánh mì cộng 3 nước cho khách Hương"
+        - "5 bao xi măng Hà Tiên cho anh Toàn"
         """
+        from infrastructure.ai.parser import VietnameseVoiceParser
+        parser = VietnameseVoiceParser()
+        parsed = parser.parse(user_input)
         
         result = {
-            "customer": {},
+            "customer": {"name": parsed["customer_name"]},
             "items": [],
             "payment": {"method": "CASH", "paid_amount": 0},
             "confidence": 0.0,
             "missing_fields": [],
-            "questions": []
+            "questions": [],
+            "delivery_note": ""
         }
         
-        # Extract customer name
-        customer_patterns = [
-            r"(Anh|Chị|Ông|Bà|Cô|Chú)\s+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]+)",
-            r"Khách hàng\s+([A-Z0-9]+)",
-            r"Quán\s+([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]+)",
-            r"([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]+)\s+gọi"  # "Minh gọi đặt..."
-        ]
-        
-        for pattern in customer_patterns:
-            match = re.search(pattern, user_input)
-            if match:
-                if len(match.groups()) == 2:
-                    result["customer"]["name"] = f"{match.group(1)} {match.group(2)}"
-                else:
-                    result["customer"]["name"] = match.group(1)
-                break
-        
-        # Extract phone number - improved patterns
-        phone_patterns = [
-            r"(?:sđt|số|phone|dt|điện thoại)[\s:]*([0-9]{9,11})",  # "sđt 0912345678"
-            r"([0-9]{10,11})(?=\s|$|,|\.|;)",  # standalone phone number
-            r"0[0-9]{9,10}"  # Vietnamese phone format
-        ]
-        
-        for pattern in phone_patterns:
-            phone_match = re.search(pattern, user_input, re.IGNORECASE)
-            if phone_match:
-                phone = phone_match.group(1) if phone_match.lastindex else phone_match.group(0)
-                # Clean phone number
-                phone = re.sub(r'\D', '', phone)
-                if len(phone) >= 9 and phone.startswith('0'):
-                    result["customer"]["phone"] = phone
-                    break
-        
-        # Extract items (quantity + unit + product) - improved patterns
-        item_patterns = [
-            # Pattern 1: "5 bao xi măng"
-            r"(\d+)\s+(bao|thùng|cái|viên|kg|tấn|lít|mét|m²|gói|chai|hộp|lon|túi)\s+([a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]+?)(?=\,|\.|$|và|giao|nhận|sđt|số|phone)",
-            # Pattern 2: "xi măng 5 bao" (reversed)
-            r"([a-zA-Zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ\s]+?)\s+(\d+)\s+(bao|thùng|cái|viên|kg|tấn|lít|mét|m²|gói|chai|hộp|lon|túi)(?=\,|\.|$|và|giao)",
-        ]
-        
-        for pattern in item_patterns:
-            matches = re.finditer(pattern, user_input, re.IGNORECASE)
-            for match in matches:
-                if len(match.groups()) == 3:
-                    # Check if first group is number or product name
-                    if match.group(1).isdigit():
-                        # Pattern 1: quantity unit product
-                        quantity = int(match.group(1))
-                        unit = match.group(2)
-                        product_name = match.group(3).strip()
-                    else:
-                        # Pattern 2: product quantity unit
-                        product_name = match.group(1).strip()
-                        quantity = int(match.group(2))
-                        unit = match.group(3)
-                    
-                    result["items"].append({
-                        "product": product_name,
-                        "quantity": quantity,
-                        "unit": unit
-                    })
-        
-        # Calculate confidence
+        # Chuyển đổi format items từ parser sang format của BizFlow LLM Provider
+        for item in parsed["items"]:
+            result["items"].append({
+                "product_name": item["product_name"],
+                "quantity": item["quantity"],
+                "unit_name": item.get("unit_name", ""),
+                "unit_price": 0 # Mặc định để người dùng điền hoặc tìm từ DB sau
+            })
+            
+        # Tính toán confidence score
         confidence = 0.0
-        if result["customer"].get("name"):
-            confidence += 0.4
+        if result["customer"].get("name") and result["customer"]["name"] != "Khách Lẻ":
+            confidence += 0.5
         if result["items"]:
             confidence += 0.4
-        if result["customer"].get("phone"):
-            confidence += 0.2
-        
+            
         result["confidence"] = round(confidence, 2)
         
-        # Identify missing fields
-        if not result["customer"].get("name"):
+        # Xác định các trường còn thiếu
+        if result["customer"]["name"] == "Khách Lẻ":
             result["missing_fields"].append("customer_name")
-            result["questions"].append("Tên khách hàng là gì?")
-        
-        if not result["customer"].get("phone"):
-            result["missing_fields"].append("customer_phone")
-            result["questions"].append("Số điện thoại khách hàng?")
-        
+            result["questions"].append("Đây có phải đơn cho Khách Lẻ không, hay cho khách hàng cụ thể nào?")
+            
         if not result["items"]:
             result["missing_fields"].append("items")
-            result["questions"].append("Khách đặt sản phẩm gì?")
-        
-        # Extract delivery notes
-        delivery_patterns = [
-            r"giao\s+(.*?)(?=\.|$)",
-            r"nhận\s+(.*?)(?=\.|$)"
-        ]
-        
-        for pattern in delivery_patterns:
-            match = re.search(pattern, user_input, re.IGNORECASE)
-            if match:
-                result["delivery_note"] = match.group(1).strip()
-                break
-        
+            result["questions"].append("Vui lòng cho biết sản phẩm và số lượng đặt hàng.")
+            
         return result
     
     async def generate_embedding(self, text: str) -> List[float]:

@@ -37,12 +37,14 @@ async def get_dashboard_stats(
     today_count = 0
     total_debt = Decimal("0")
     low_stock = 0
+    new_customers = 0
     recent_activity = []
     
     # Customer specific stats
     customer_orders_count = None
     customer_debt = None
     new_products_count = None
+
 
     if current_user.role in ["OWNER", "EMPLOYEE", "ADMIN"]:
         order_stats = db.query(
@@ -77,6 +79,17 @@ async def get_dashboard_stats(
                 Inventory.available_quantity <= Inventory.low_stock_threshold
             )
         ).scalar() or 0
+
+        # New customers today
+        from infrastructure.database.models import Customer
+        new_customers = db.query(func.count(Customer.id)).filter(
+            and_(
+                Customer.owner_id == owner_id,
+                Customer.created_at >= start_of_day,
+                Customer.created_at <= end_of_day
+            )
+        ).scalar() or 0
+
         
         recent_orders = db.query(Order).filter(
             Order.owner_id == owner_id
@@ -145,17 +158,20 @@ async def get_dashboard_stats(
         except Exception:
             ai_summary = "Không thể tạo tóm tắt AI lúc này."
 
-    return DashboardStatsResponse(
-        today_revenue=today_revenue,
-        today_orders_count=today_count,
-        total_debt_pending=total_debt,
-        low_stock_count=low_stock,
-        recent_activity=recent_activity,
-        customer_orders_count=customer_orders_count,
-        customer_debt=customer_debt,
-        new_products_count=new_products_count,
-        ai_summary=ai_summary
-    )
+    return {
+        "today_revenue": today_revenue,
+        "today_orders_count": today_count,
+        "today_orders": today_count, # Alias for frontend
+        "total_debt_pending": total_debt,
+        "low_stock_count": low_stock,
+        "new_customers": new_customers,
+        "recent_activity": recent_activity,
+        "customer_orders_count": customer_orders_count,
+        "customer_debt": customer_debt,
+        "new_products_count": new_products_count,
+        "ai_summary": ai_summary
+    }
+
 
 @router.get("/revenue", response_model=List[dict])
 async def get_revenue_analytics(
@@ -170,6 +186,10 @@ async def get_revenue_analytics(
     if not current_user.owner_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
+    # Define time boundaries for filtering
+    start_of_period = datetime.combine(start_date, datetime.min.time())
+    end_of_period = datetime.combine(end_date, datetime.max.time())
+
     # Group by date
     results = db.query(
         func.date(Order.order_date).label("date"),
@@ -177,8 +197,8 @@ async def get_revenue_analytics(
     ).filter(
         and_(
             Order.owner_id == current_user.owner_id,
-            Order.order_date >= start_date,
-            Order.order_date <= end_date,
+            Order.order_date >= start_of_period,
+            Order.order_date <= end_of_period,
             Order.order_type == "SALE" 
         )
     ).group_by(
@@ -188,6 +208,8 @@ async def get_revenue_analytics(
     ).all()
 
     return [{"date": str(r.date), "revenue": r.revenue} for r in results]
+
+
 
 
 @router.get("/top-products", response_model=List[dict])

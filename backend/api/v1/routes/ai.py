@@ -37,13 +37,20 @@ async def parse_order_from_text(
             detail="Người dùng không thuộc về bất kỳ cửa hàng nào"
         )
 
-    # Initialize AI provider and repository
+    # Initialize AI provider and repositories
     from infrastructure.ai import get_llm_provider
+    from infrastructure.database.product_repository_impl import SQLAlchemyProductRepository
+    from infrastructure.database.customer_repository_impl import SQLAlchemyCustomerRepository
+    
     llm_provider = get_llm_provider()
     draft_repo = SQLAlchemyDraftOrderRepository(db)
+    product_repo = SQLAlchemyProductRepository(db)
+    customer_repo = SQLAlchemyCustomerRepository(db)
 
     use_case = CreateDraftOrderFromAIUseCase(
         draft_repo=draft_repo,
+        product_repo=product_repo,
+        customer_repo=customer_repo,
         llm_provider=llm_provider,
     )
 

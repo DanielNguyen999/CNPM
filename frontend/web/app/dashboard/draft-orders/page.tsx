@@ -102,8 +102,9 @@ export default function DraftOrdersPage() {
               </BreadcrumbList>
             </Breadcrumb>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-              {view === 'review' ? 'Kiểm tra đơn hàng' : 'Đơn Nháp (AI)'}
+              {view === 'review' ? 'Kiểm tra đơn hàng' : 'Đơn Nháp (AI) - LIVE'}
             </h2>
+
             <p className="text-muted-foreground text-sm">
               Xử lý các đơn hàng được tạo tự động từ tiếng Việt (Văn bản/Giọng nói).
             </p>

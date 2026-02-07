@@ -15,7 +15,6 @@ import {
     Download
 } from "lucide-react";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,13 +45,13 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { notifications } from "@/lib/notifications";
 import { productsApi } from "@/lib/api/products";
 import { ProductForm } from "@/components/ProductForm";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function ProductsPage() {
-    const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -78,12 +77,13 @@ export default function ProductsPage() {
         mutationFn: (id: number) => productsApi.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["products"] });
+            notifications.success("Thành công", "Đã xóa sản phẩm khỏi danh mục.");
         },
     });
 
     const handleEdit = (product: any) => {
         if (!canEditProducts()) {
-            alert("Bạn không có quyền chỉnh sửa sản phẩm.");
+            notifications.error("Truy cập bị từ chối", "Bạn không có quyền chỉnh sửa sản phẩm.");
             return;
         }
         setSelectedProduct(product);
@@ -92,7 +92,7 @@ export default function ProductsPage() {
 
     const handleCreate = () => {
         if (!canEditProducts()) {
-            alert("Bạn không có quyền tạo sản phẩm mới.");
+            notifications.error("Truy cập bị từ chối", "Bạn không có quyền tạo sản phẩm mới.");
             return;
         }
         setSelectedProduct(null);
@@ -101,7 +101,7 @@ export default function ProductsPage() {
 
     const handleDeleteClick = (id: number) => {
         if (!canDeleteProducts()) {
-            alert("Bạn không có quyền xóa sản phẩm.");
+            notifications.error("Truy cập bị từ chối", "Bạn không có quyền xóa sản phẩm.");
             return;
         }
         setProductToDelete(id);
@@ -114,11 +114,7 @@ export default function ProductsPage() {
             await deleteMutation.mutateAsync(productToDelete);
             setIsDeleteDialogOpen(false);
         } catch (err: any) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Không thể xóa sản phẩm",
-            });
+            notifications.error("Lỗi", "Không thể xóa sản phẩm. Vui lòng thử lại sau.");
         } finally {
             setProductToDelete(null);
         }
@@ -295,14 +291,23 @@ export default function ProductsPage() {
                                 filteredProducts?.map((product: any) => (
                                     <TableRow key={product.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => handleEdit(product)}>
                                         <TableCell onClick={(e) => e.stopPropagation()}>
-                                            <div className="h-10 w-10 rounded-md bg-slate-100 border flex items-center justify-center text-slate-400 overflow-hidden">
+                                            <div className="h-10 w-10 rounded-md bg-slate-100 border flex items-center justify-center text-slate-400 overflow-hidden relative group/img">
                                                 {product.image_url ? (
-                                                    <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                                                    <img
+                                                        src={product.image_url}
+                                                        alt={product.name}
+                                                        className="h-full w-full object-cover"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=?';
+                                                            (e.target as HTMLImageElement).classList.add('opacity-40');
+                                                        }}
+                                                    />
                                                 ) : (
                                                     <ImageIcon className="h-5 w-5 opacity-50" />
                                                 )}
                                             </div>
                                         </TableCell>
+
                                         <TableCell className="font-mono text-xs font-bold text-slate-500">{product.product_code}</TableCell>
                                         <TableCell>
                                             <div className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">

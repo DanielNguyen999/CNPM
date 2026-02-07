@@ -372,15 +372,22 @@ export default function EmployeesPage() {
                         e.preventDefault();
                         setIsSubmitting(true);
                         try {
+                            // Update basic info
                             await apiClient.put(`/users/employees/${editingEmployee?.id}`, {
                                 full_name: formData.full_name,
                                 phone: formData.phone,
-                                // Only include password if it's been changed
-                                ...(formData.password ? { password: formData.password } : {})
                             });
+
+                            // Update password if provided
+                            if (formData.password && formData.password.trim()) {
+                                await apiClient.patch(`/users/employees/${editingEmployee?.id}/password`, {
+                                    new_password: formData.password
+                                });
+                            }
+
                             toast({
                                 title: "Thành công",
-                                description: "Đã cập nhật thông tin nhân viên",
+                                description: formData.password ? "Đã cập nhật thông tin và mật khẩu nhân viên" : "Đã cập nhật thông tin nhân viên",
                             });
                             queryClient.invalidateQueries({ queryKey: ["employees"] });
                             setIsEditModalOpen(false);

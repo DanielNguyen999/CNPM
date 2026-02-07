@@ -37,6 +37,10 @@ interface AuthState {
     canViewReports: () => boolean;
     canDeleteOrders: () => boolean;
     setPermissions: (permissions: string[]) => void;
+
+    // Hydration flag
+    _hasHydrated: boolean;
+    setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -45,6 +49,8 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             token: null,
             isAuthenticated: false,
+            _hasHydrated: false,
+            setHasHydrated: (state) => set({ _hasHydrated: state }),
             login: (user, token) => {
                 localStorage.setItem('access_token', token);
                 set({ user, token, isAuthenticated: true });
@@ -123,6 +129,9 @@ export const useAuthStore = create<AuthState>()(
         }),
         {
             name: 'bizflow-auth',
+            onRehydrateStorage: (state) => {
+                return () => state.setHasHydrated(true);
+            },
         }
     )
 );

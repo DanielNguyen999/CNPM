@@ -401,13 +401,23 @@ class StockAdjustmentRequest(BaseModel):
     quantity_change: Decimal
     reason: str
     notes: Optional[str] = None
+    
+    @field_validator('quantity_change')
+    @classmethod
+    def validate_integer_only(cls, v):
+        """Ensure quantity is an integer (no decimals)"""
+        if v != int(v):
+            raise ValueError('Quantity must be an integer (no decimals allowed)')
+        return int(v)
 
 
 class DashboardStatsResponse(BaseModel):
     today_revenue: Decimal
     today_orders_count: int
+    today_orders: int = 0
     total_debt_pending: Decimal
     low_stock_count: int
+    new_customers: int = 0
     recent_activity: List[Any] = []
     
     # Customer specific fields
@@ -417,3 +427,4 @@ class DashboardStatsResponse(BaseModel):
     
     # AI enhanced fields
     ai_summary: Optional[str] = None
+

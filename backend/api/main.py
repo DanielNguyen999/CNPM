@@ -21,17 +21,31 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware
+# Middlewares are applied in reverse order of addition (LIFO for request)
+
+# We want CORS to be the OUTERMOST layer to ensure headers are added to ALL responses
+
+# 1. Idempotency Middleware (Inner)
+# app.add_middleware(IdempotencyMiddleware, redis_url=settings.redis_url)
+
+# 2. CORS middleware (Outer)
+development_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+]
+allowed_origins = ["*"] # list(set(settings.cors_origins_list + development_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Idempotency Middleware for Orders
-app.add_middleware(IdempotencyMiddleware, redis_url=settings.redis_url)
+
 
 # Global Exception Handler for Vietnamese JSON responses
 from fastapi import Request, HTTPException

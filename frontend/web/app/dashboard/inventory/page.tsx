@@ -47,7 +47,8 @@ export default function InventoryPage() {
     const { isOwner, isAdmin } = useAuthStore();
 
     // EMPLOYEE can IMPORT/EXPORT, only OWNER/ADMIN can ADJUSTMENT
-    const canDoAdjustment = isOwner() || isAdmin();
+    // User requested to enable for Employee too
+    const canDoAdjustment = true;
 
     const { data: inventory, isLoading } = useQuery({
         queryKey: ["inventory"],
@@ -245,7 +246,7 @@ export default function InventoryPage() {
                                         <TableCell>
                                             <div className="flex items-center gap-2">
                                                 <span className={`font-bold text-lg ${isLow ? 'text-orange-600' : 'text-emerald-600'}`}>
-                                                    {Number(item.available_quantity).toLocaleString('vi-VN')}
+                                                    {Math.floor(Number(item.available_quantity)).toLocaleString('vi-VN')}
                                                 </span>
                                                 {isLow && (
                                                     <span className="flex items-center text-[10px] font-bold uppercase text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">

@@ -216,10 +216,12 @@ class SQLAlchemyProductRepository(ProductRepository):
             base_unit_id=product_model.base_unit_id,
             base_price=product_model.base_price,
             cost_price=product_model.cost_price,
+            image_url=product_model.image_url,
             is_active=product_model.is_active,
             created_at=product_model.created_at,
             updated_at=product_model.updated_at
         )
+
         
         # Populate available quantity from inventory
         if hasattr(product_model, 'inventory') and product_model.inventory:

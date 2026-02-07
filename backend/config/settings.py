@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
     
     @property
     def mysql_url(self) -> str:

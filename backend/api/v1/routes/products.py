@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from infrastructure.database.connection import get_db
 from infrastructure.database.product_repository_impl import SQLAlchemyProductRepository
-from api.schemas import ProductCreate, ProductUpdate, ProductResponse
+from api.schemas import ProductCreate, ProductUpdate, ProductResponse, PaginatedResponse
 from api.v1.auth.dependencies import CurrentUser, get_current_user, require_role
 from domain.entities.product import Product as ProductEntity
 from domain.services.audit_service import AuditService
@@ -128,16 +128,16 @@ async def get_product(
     )
 
 
-@router.get("", response_model=List[ProductResponse])
+@router.get("", response_model=PaginatedResponse)
 async def list_products(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=100),
     category: Optional[str] = None,
     search: Optional[str] = None,
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List products for current user's owner"""
+    """List products for current user's owner (Paginated)"""
     if not current_user.owner_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -145,23 +145,27 @@ async def list_products(
         )
     
     product_repo = SQLAlchemyProductRepository(db)
+    skip = (page - 1) * page_size
     
     # Import inventory repo to get stock levels
     from infrastructure.database.inventory_repository_impl import SQLAlchemyInventoryRepository
     inventory_repo = SQLAlchemyInventoryRepository(db)
     
     if search:
-        products = await product_repo.search_by_name(search, current_user.owner_id, limit=limit)
+        # Search results (usually not heavily paginated for simple search but let's be consistent)
+        products = await product_repo.search_by_name(search, current_user.owner_id, limit=page_size)
+        total = len(products) # For search, total is often just the results length unless we do double count
     else:
         products = await product_repo.list_by_owner(
             owner_id=current_user.owner_id,
             skip=skip,
-            limit=limit,
+            limit=page_size,
             category=category
         )
+        total = await product_repo.count_by_owner(current_user.owner_id)
     
     # Fetch inventory for each product
-    result = []
+    result_items = []
     for product in products:
         # Get inventory to include available quantity
         inventory = await inventory_repo.get_by_product(product.id, current_user.owner_id)
@@ -180,7 +184,7 @@ async def list_products(
                     'is_default': pu['is_default']
                 })
         
-        result.append(
+        result_items.append(
             ProductResponse(
                 id=product.id,
                 owner_id=product.owner_id,
@@ -199,7 +203,15 @@ async def list_products(
             )
         )
     
-    return result
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    
+    return {
+        "items": result_items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages
+    }
 
 
 @router.put("/{product_id}", response_model=ProductResponse)

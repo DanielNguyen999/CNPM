@@ -95,7 +95,7 @@ class SQLAlchemyDraftOrderRepository(DraftOrderRepository):
         draft_model.status = draft_order.status.value
         draft_model.confirmed_by = draft_order.confirmed_by
         draft_model.confirmed_at = draft_order.confirmed_at
-        draft_model.order_id = draft_order.order_id
+        draft_model.final_order_id = draft_order.final_order_id
         
         self.session.commit()
         return draft_order
@@ -149,5 +149,5 @@ class SQLAlchemyDraftOrderRepository(DraftOrderRepository):
             expires_at=model.expires_at,
             confirmed_by=model.confirmed_by,
             confirmed_at=model.confirmed_at,
-            order_id=model.order_id
+            final_order_id=model.final_order_id
         )

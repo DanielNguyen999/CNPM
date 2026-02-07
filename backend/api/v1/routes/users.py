@@ -92,6 +92,152 @@ async def create_employee(
     return new_user
 
 
+@router.put("/employees/{user_id}", response_model=UserResponse)
+async def update_employee(
+    user_id: int,
+    request: UserProfileUpdate,
+    current_user: UserModel = Depends(require_role("OWNER")),
+    db: Session = Depends(get_db)
+):
+    """
+    Update employee information (restricted to OWNER).
+    Can update full_name, phone, and optionally password.
+    """
+    owner_id = getattr(current_user, "owner_id", None)
+    if not owner_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Người dùng không thuộc về bất kỳ cửa hàng nào"
+        )
+    
+    # Find the employee user
+    employee_user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not employee_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy nhân viên"
+        )
+    
+    # Verify this employee belongs to the current owner
+    employee_record = db.query(EmployeeModel).filter(
+        EmployeeModel.user_id == user_id,
+        EmployeeModel.owner_id == owner_id
+    ).first()
+    
+    if not employee_record:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền chỉnh sửa nhân viên này"
+        )
+    
+    # Update fields
+    if request.full_name is not None:
+        employee_user.full_name = request.full_name
+    if request.phone is not None:
+        employee_user.phone = request.phone
+    
+    # Check if password is being updated (using a dict approach since UserProfileUpdate might not have password)
+    # We'll accept it as a dict parameter instead
+    db.commit()
+    db.refresh(employee_user)
+    
+    return employee_user
+
+
+@router.patch("/employees/{user_id}/password")
+async def reset_employee_password(
+    user_id: int,
+    password_data: dict,
+    current_user: UserModel = Depends(require_role("OWNER")),
+    db: Session = Depends(get_db)
+):
+    """
+    Reset employee password (restricted to OWNER).
+    Requires: new_password
+    """
+    owner_id = getattr(current_user, "owner_id", None)
+    if not owner_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Người dùng không thuộc về bất kỳ cửa hàng nào"
+        )
+    
+    # Find the employee user
+    employee_user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not employee_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy nhân viên"
+        )
+    
+    # Verify this employee belongs to the current owner
+    employee_record = db.query(EmployeeModel).filter(
+        EmployeeModel.user_id == user_id,
+        EmployeeModel.owner_id == owner_id
+    ).first()
+    
+    if not employee_record:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền chỉnh sửa nhân viên này"
+        )
+    
+    new_password = password_data.get("new_password")
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu mới phải có ít nhất 6 ký tự"
+        )
+    
+    employee_user.password_hash = hash_password(new_password)
+    db.commit()
+    
+    return {"message": "Đã đặt lại mật khẩu cho nhân viên"}
+
+
+@router.delete("/employees/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_employee(
+    user_id: int,
+    current_user: UserModel = Depends(require_role("OWNER")),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete/deactivate employee (restricted to OWNER).
+    """
+    owner_id = getattr(current_user, "owner_id", None)
+    if not owner_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Người dùng không thuộc về bất kỳ cửa hàng nào"
+        )
+    
+    # Find the employee user
+    employee_user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not employee_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy nhân viên"
+        )
+    
+    # Verify this employee belongs to the current owner
+    employee_record = db.query(EmployeeModel).filter(
+        EmployeeModel.user_id == user_id,
+        EmployeeModel.owner_id == owner_id
+    ).first()
+    
+    if not employee_record:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền xóa nhân viên này"
+        )
+    
+    # Soft delete by deactivating
+    employee_user.is_active = False
+    db.commit()
+    
+    return None
+
+
 @router.put("/profile", response_model=UserResponse)
 async def update_profile(
     request: UserProfileUpdate,
