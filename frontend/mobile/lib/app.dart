@@ -9,7 +9,9 @@ import 'services/customer_service.dart';
 import 'services/order_service.dart';
 import 'services/debt_service.dart';
 import 'services/reports_service.dart';
+import 'services/notification_service.dart';
 import 'services/sse_service.dart';
+import 'providers/notification_provider.dart';
 import 'core/constants/app_routes.dart';
 import 'core/constants/app_colors.dart';
 import 'screens/auth/login_screen.dart';
@@ -39,6 +41,29 @@ class BizFlowApp extends StatelessWidget {
         Provider(create: (_) => OrderService(apiClient)),
         Provider(create: (_) => DebtService(apiClient)),
         Provider(create: (_) => ReportsService(apiClient)),
+        Provider(create: (_) => NotificationService(apiClient)),
+        ChangeNotifierProxyProvider2<AuthState, NotificationService,
+            NotificationProvider>(
+          create: (context) => NotificationProvider(
+            context.read<NotificationService>(),
+            isLoggedIn: context.read<AuthState>().isLoggedIn,
+          ),
+          update: (context, authState, service, previous) {
+            if (previous == null) {
+              return NotificationProvider(service,
+                  isLoggedIn: authState.isLoggedIn);
+            }
+            if (previous.isLoggedIn != authState.isLoggedIn) {
+              if (authState.isLoggedIn) {
+                previous.startPolling();
+                previous.fetchNotifications();
+              } else {
+                previous.stopPolling();
+              }
+            }
+            return previous;
+          },
+        ),
         ProxyProvider<AuthState, SSEService>(
           update: (_, authState, __) => SSEService(authState),
           dispose: (_, sse) => sse.dispose(),
