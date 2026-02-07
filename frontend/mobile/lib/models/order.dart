@@ -87,3 +87,44 @@ class OrderItem {
     };
   }
 }
+
+class DraftOrder {
+  final List<DraftItem> items;
+  final String? rawText;
+
+  DraftOrder({required this.items, this.rawText});
+
+  factory DraftOrder.fromJson(Map<String, dynamic> json) {
+    var rawItems = json['items'] as List? ?? [];
+    return DraftOrder(
+      items: rawItems.map((i) => DraftItem.fromJson(i)).toList(),
+      rawText: json['raw_text'],
+    );
+  }
+}
+
+class DraftItem {
+  final int productId;
+  final String productName;
+  final double quantity;
+  final int unitId;
+  final double unitPrice;
+
+  DraftItem({
+    required this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.unitId,
+    required this.unitPrice,
+  });
+
+  factory DraftItem.fromJson(Map<String, dynamic> json) {
+    return DraftItem(
+      productId: json['product_id'] ?? 0,
+      productName: json['product_name'] ?? 'Sản phẩm',
+      quantity: (json['quantity'] ?? 0).toDouble(),
+      unitId: json['unit_id'] ?? 0,
+      unitPrice: (json['unit_price'] ?? 0).toDouble(),
+    );
+  }
+}

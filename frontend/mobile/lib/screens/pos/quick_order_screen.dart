@@ -5,8 +5,10 @@ import '../../core/auth/auth_state.dart';
 import 'widgets/product_search_sheet.dart';
 import 'widgets/cart_list.dart';
 import 'widgets/checkout_sheet.dart';
+import 'widgets/smart_order_input.dart';
 import '../../models/product.dart';
 import '../../models/customer.dart';
+import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/customer_service.dart';
 import '../../core/constants/app_colors.dart';
@@ -61,7 +63,6 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
   }
 
   void _showCustomerSearch() async {
-    // Basic customer selection logic
     final customerService =
         Provider.of<CustomerService>(context, listen: false);
     final response = await customerService.listCustomers();
@@ -112,7 +113,6 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
       final orderService = Provider.of<OrderService>(context, listen: false);
       final authState = Provider.of<AuthState>(context, listen: false);
 
-      // Generate idempotency key
       final idempotencyKey =
           "ord_${DateTime.now().millisecondsSinceEpoch}_${authState.userId}";
 
@@ -137,17 +137,14 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
           idempotencyKey: idempotencyKey);
 
       if (mounted) {
-        // Close CheckoutSheet first
-        Navigator.pop(context);
+        Navigator.pop(context); // Close CheckoutSheet
 
-        // Show Success Dialog
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) =>
               OrderSuccessDialog(orderData: response.toJson()),
         ).then((_) {
-          // Reset cart after dialog is closed
           if (mounted) {
             setState(() {
               _cartItems.clear();
@@ -163,6 +160,52 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
     }
   }
 
+  Future<void> _showSmartInput() async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SmartOrderInput(
+        onProcess: (command) async {
+          try {
+            final orderService =
+                Provider.of<OrderService>(context, listen: false);
+            final draft = await orderService.createDraftOrder(command);
+
+            if (mounted) {
+              setState(() {
+                for (var item in draft.items) {
+                  final existingIndex = _cartItems
+                      .indexWhere((i) => i.product.id == item.productId);
+                  if (existingIndex >= 0) {
+                    _cartItems[existingIndex].quantity += item.quantity.toInt();
+                  } else {
+                    // Fallback for new products from AI
+                    _cartItems.add(CartItem(
+                      product: Product(
+                        id: item.productId,
+                        name: item.productName,
+                        productCode: 'AI_GEN',
+                        price: item.unitPrice,
+                      ),
+                      quantity: item.quantity.toInt(),
+                      price: item.unitPrice,
+                      unitId: item.unitId,
+                    ));
+                  }
+                }
+              });
+              Fluttertoast.showToast(
+                  msg: "AI đã thêm ${draft.items.length} sản phẩm");
+            }
+          } catch (e) {
+            Fluttertoast.showToast(msg: "AI không hiểu lệnh: $e");
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -176,7 +219,6 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
       ],
       body: Column(
         children: [
-          // Customer selection display
           if (_selectedCustomer != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -198,7 +240,6 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
                 ],
               ),
             ),
-
           Expanded(
             child: CartList(
               items: _cartItems,
@@ -210,8 +251,6 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
               },
             ),
           ),
-
-          // Bottom Bar
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -305,6 +344,11 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showSmartInput,
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.auto_awesome, color: Colors.white),
       ),
     );
   }

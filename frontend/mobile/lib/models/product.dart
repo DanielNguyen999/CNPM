@@ -7,6 +7,7 @@ class Product {
   final double price;
   final double? costPrice;
   final double? availableQuantity;
+  final String? imageUrl;
   final List<ProductUnit>? units;
 
   Product({
@@ -18,6 +19,7 @@ class Product {
     required this.price,
     this.costPrice,
     this.availableQuantity,
+    this.imageUrl,
     this.units,
   });
 
@@ -31,6 +33,7 @@ class Product {
       price: (json['base_price'] ?? json['price'] ?? 0).toDouble(),
       costPrice: (json['cost_price'] ?? 0).toDouble(),
       availableQuantity: (json['available_quantity'] ?? 0).toDouble(),
+      imageUrl: json['image_url'],
       units: json['units'] != null
           ? (json['units'] as List).map((i) => ProductUnit.fromJson(i)).toList()
           : null,

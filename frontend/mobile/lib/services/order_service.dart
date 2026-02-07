@@ -25,4 +25,16 @@ class OrderService {
       rethrow;
     }
   }
+
+  Future<DraftOrder> createDraftOrder(String text) async {
+    try {
+      final response = await apiClient.dio.post(
+        '/orders/draft',
+        data: {'text': text},
+      );
+      return DraftOrder.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
