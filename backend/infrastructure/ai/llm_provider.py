@@ -75,3 +75,10 @@ class LLMProvider(ABC):
             Predictions list
         """
         pass
+
+    @abstractmethod
+    async def transcribe_audio(self, audio_file: bytes) -> str:
+        """
+        Transcribe audio file to text.
+        """
+        pass

@@ -118,3 +118,78 @@ async def test_ai_parsing():
         "provider": "MockLLMProvider",
         "results": results
     }
+
+from fastapi import UploadFile, File
+
+@router.post("/voice-to-order", response_model=DraftOrderResponse, status_code=status.HTTP_201_CREATED)
+async def process_voice_order(
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Process voice audio, transcribe to text, and parse into draft order.
+    """
+    if not current_user.owner_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Người dùng không thuộc về bất kỳ cửa hàng nào"
+        )
+        
+    # Initialize components
+    from infrastructure.ai import get_llm_provider
+    from infrastructure.database.product_repository_impl import SQLAlchemyProductRepository
+    from infrastructure.database.customer_repository_impl import SQLAlchemyCustomerRepository
+    from infrastructure.database.draft_order_repository_impl import SQLAlchemyDraftOrderRepository
+    
+    llm_provider = get_llm_provider()
+    draft_repo = SQLAlchemyDraftOrderRepository(db)
+    product_repo = SQLAlchemyProductRepository(db)
+    customer_repo = SQLAlchemyCustomerRepository(db)
+    
+    # 1. Read audio file
+    if not file:
+         raise HTTPException(status_code=400, detail="Không có file âm thanh")
+         
+    try:
+        audio_content = await file.read()
+        
+        # 2. Transcribe
+        transcribed_text = await llm_provider.transcribe_audio(audio_content)
+        
+        if not transcribed_text:
+             raise HTTPException(status_code=400, detail="Không thể chuyển đổi giọng nói thành văn bản")
+             
+        # 3. Parse Order (Reuse UseCase but with new input source)
+        use_case = CreateDraftOrderFromAIUseCase(
+            draft_repo=draft_repo,
+            product_repo=product_repo,
+            customer_repo=customer_repo,
+            llm_provider=llm_provider,
+        )
+        
+        created_draft = await use_case.execute(
+            owner_id=current_user.owner_id,
+            user_input=transcribed_text,
+            source="VOICE", # Add VOICE to enum if needed, or map to AI_voice
+            created_by=current_user.user_id,
+            context={"owner_id": current_user.owner_id},
+        )
+        
+        return DraftOrderResponse(
+            id=created_draft.id,
+            owner_id=created_draft.owner_id,
+            draft_code=created_draft.draft_code,
+            source=created_draft.source.value,
+            original_input=created_draft.original_input,
+            parsed_data=created_draft.parsed_data,
+            confidence_score=created_draft.confidence_score or 0,
+            missing_fields=created_draft.missing_fields or [],
+            questions=created_draft.questions or [],
+            status=created_draft.status.value,
+            created_at=created_draft.created_at,
+            expires_at=created_draft.expires_at,
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi xử lý giọng nói: {str(e)}")

@@ -24,4 +24,30 @@ class ProductService {
       rethrow;
     }
   }
+
+  Future<Product> createProduct(Map<String, dynamic> data) async {
+    try {
+      final response = await apiClient.dio.post('/products', data: data);
+      return Product.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Product> updateProduct(int id, Map<String, dynamic> data) async {
+    try {
+      final response = await apiClient.dio.put('/products/$id', data: data);
+      return Product.fromJson(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteProduct(int id) async {
+    try {
+      await apiClient.dio.delete('/products/$id');
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

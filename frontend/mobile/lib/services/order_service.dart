@@ -51,8 +51,8 @@ class OrderService {
   Future<DraftOrder> createDraftOrder(String text) async {
     try {
       final response = await apiClient.dio.post(
-        '/orders/draft',
-        data: {'text': text},
+        '/ai/parse',
+        data: {'user_input': text, 'source': 'AI_TEXT'},
       );
       return DraftOrder.fromJson(response.data);
     } catch (e) {

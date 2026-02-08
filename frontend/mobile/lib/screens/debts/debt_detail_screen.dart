@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../../core/auth/auth_state.dart';
 import 'widgets/repay_modal.dart';
 import '../../services/debt_service.dart';
 import '../../models/debt.dart';
@@ -127,7 +128,11 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
                         ),
                       ),
                     ),
-                    if (_debt!.remainingAmount > 0)
+                    if (_debt!.remainingAmount > 0 &&
+                        Provider.of<AuthState>(context, listen: false)
+                                .user
+                                ?.role !=
+                            'CUSTOMER')
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(

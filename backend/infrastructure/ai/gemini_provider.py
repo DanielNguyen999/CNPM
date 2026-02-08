@@ -174,3 +174,31 @@ BẮT ĐẦU PHÂN TÍCH:
         except Exception as e:
             logger.error(f"Gemini forecast error: {e}")
             return []
+
+    async def transcribe_audio(self, audio_file: bytes) -> str:
+        """
+        Transcribe audio using Gemini 1.5 Flash (multimodal).
+        """
+        if not self.model:
+            return ""
+            
+        try:
+            # Gemini 1.5 Flash supports audio directly
+            # We need to pass the bytes with mime_type
+            
+            prompt = "Hãy nghe đoạn ghi âm này và viết lại chính xác nội dung bằng tiếng Việt."
+            
+            response = self.model.generate_content([
+                prompt,
+                {
+                    "mime_type": "audio/mp3",
+                    "data": audio_file
+                }
+            ])
+            
+            logger.info(f"Gemini transcription: {response.text}")
+            return response.text
+        except Exception as e:
+            logger.error(f"Gemini transcription error: {e}")
+            # Fallback or re-raise? For now return empty string or error message
+            return ""

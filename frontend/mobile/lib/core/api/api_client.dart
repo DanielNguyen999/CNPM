@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/env.dart';
@@ -51,6 +52,13 @@ class ApiClient {
                 break;
             }
           }
+        }
+
+        if (e.response != null) {
+          debugPrint(
+              'API Error: ${e.response?.statusCode} - ${e.response?.data}');
+        } else {
+          debugPrint('API Connection Error: ${e.message} - ${e.type}');
         }
 
         final error = DioException(

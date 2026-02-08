@@ -15,6 +15,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/pos/order_success_dialog.dart';
+import '../../widgets/voice/voice_recorder_sheet.dart';
 
 class QuickOrderScreen extends StatefulWidget {
   const QuickOrderScreen({super.key});
@@ -174,43 +175,60 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => SmartOrderInput(
         onProcess: (command) async {
-          try {
-            final orderService =
-                Provider.of<OrderService>(context, listen: false);
-            final draft = await orderService.createDraftOrder(command);
-
-            if (mounted) {
-              setState(() {
-                for (var item in draft.items) {
-                  final existingIndex = _cartItems
-                      .indexWhere((i) => i.product.id == item.productId);
-                  if (existingIndex >= 0) {
-                    _cartItems[existingIndex].quantity += item.quantity.toInt();
-                  } else {
-                    // Fallback for new products from AI
-                    _cartItems.add(CartItem(
-                      product: Product(
-                        id: item.productId,
-                        name: item.productName,
-                        productCode: 'AI_GEN',
-                        price: item.unitPrice,
-                      ),
-                      quantity: item.quantity.toInt(),
-                      price: item.unitPrice,
-                      unitId: item.unitId,
-                    ));
-                  }
-                }
-              });
-              Fluttertoast.showToast(
-                  msg: "AI đã thêm ${draft.items.length} sản phẩm");
-            }
-          } catch (e) {
-            Fluttertoast.showToast(msg: "AI không hiểu lệnh: $e");
-          }
+          _processDraftOrder(command: command);
         },
       ),
     );
+  }
+
+  void _showVoiceInput() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const VoiceRecorderSheet(),
+    ).then((result) {
+      if (result is DraftOrder) {
+        _applyDraftOrder(result);
+      }
+    });
+  }
+
+  Future<void> _processDraftOrder({String? command}) async {
+    try {
+      final orderService = Provider.of<OrderService>(context, listen: false);
+      final draft = await orderService.createDraftOrder(command!);
+      _applyDraftOrder(draft);
+    } catch (e) {
+      Fluttertoast.showToast(msg: "AI không hiểu lệnh: $e");
+    }
+  }
+
+  void _applyDraftOrder(DraftOrder draft) {
+    if (!mounted) return;
+    setState(() {
+      for (var item in draft.items) {
+        final existingIndex =
+            _cartItems.indexWhere((i) => i.product.id == item.productId);
+        if (existingIndex >= 0) {
+          _cartItems[existingIndex].quantity += item.quantity.toInt();
+        } else {
+          // Fallback for new products from AI
+          _cartItems.add(CartItem(
+            product: Product(
+              id: item.productId,
+              name: item.productName,
+              productCode: 'AI_GEN',
+              price: item.unitPrice,
+            ),
+            quantity: item.quantity.toInt(),
+            price: item.unitPrice,
+            unitId: item.unitId,
+          ));
+        }
+      }
+    });
+    Fluttertoast.showToast(msg: "AI đã thêm ${draft.items.length} sản phẩm");
   }
 
   @override
@@ -352,10 +370,23 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showSmartInput,
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.auto_awesome, color: Colors.white),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: "voice",
+            onPressed: _showVoiceInput,
+            backgroundColor: AppColors.error,
+            child: const Icon(Icons.mic, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: "text",
+            onPressed: _showSmartInput,
+            backgroundColor: AppColors.primary,
+            child: const Icon(Icons.keyboard, color: Colors.white),
+          ),
+        ],
       ),
     );
   }

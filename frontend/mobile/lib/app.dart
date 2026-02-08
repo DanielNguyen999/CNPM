@@ -11,11 +11,15 @@ import 'services/debt_service.dart';
 import 'services/reports_service.dart';
 import 'services/notification_service.dart';
 import 'services/sse_service.dart';
+import 'services/admin_service.dart';
+import 'services/inventory_service.dart';
+import 'services/ai_service.dart';
 import 'providers/notification_provider.dart';
 
 import 'core/constants/app_routes.dart';
 import 'core/constants/app_colors.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/pos/quick_order_screen.dart';
 import 'screens/inventory/inventory_screen.dart';
@@ -29,6 +33,8 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/suppliers/supplier_list_screen.dart';
 import 'screens/cashbook/cashbook_screen.dart';
 import 'screens/inventory_adjustment/inventory_adjustment_screen.dart';
+import 'screens/inventory/product_form_screen.dart';
+import 'models/product.dart';
 
 class BizFlowApp extends StatelessWidget {
   final ApiClient apiClient;
@@ -50,7 +56,11 @@ class BizFlowApp extends StatelessWidget {
         Provider(create: (_) => OrderService(apiClient)),
         Provider(create: (_) => DebtService(apiClient)),
         Provider(create: (_) => ReportsService(apiClient)),
+        Provider(create: (_) => ReportsService(apiClient)),
         Provider(create: (_) => NotificationService(apiClient)),
+        Provider(create: (_) => AdminService(apiClient)),
+        Provider(create: (_) => InventoryService(apiClient)),
+        Provider(create: (_) => AIService(apiClient)),
         ChangeNotifierProxyProvider2<AuthState, NotificationService,
             NotificationProvider>(
           create: (context) => NotificationProvider(
@@ -85,18 +95,17 @@ class BizFlowApp extends StatelessWidget {
             theme: ThemeData(
               useMaterial3: true,
               colorSchemeSeed: AppColors.primary,
-              // Fix Google Fonts or typography if needed later
             ),
-            // Home logic based on auth state
             home: authState.isLoggedIn
                 ? const DashboardScreen()
                 : const LoginScreen(),
-
-            // Safer dynamic routing using onGenerateRoute
             onGenerateRoute: (settings) {
               switch (settings.name) {
                 case AppRoutes.login:
                   return MaterialPageRoute(builder: (_) => const LoginScreen());
+                case '/forgot-password':
+                  return MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordScreen());
                 case AppRoutes.dashboard:
                   return MaterialPageRoute(
                       builder: (_) => const DashboardScreen());
@@ -130,6 +139,10 @@ class BizFlowApp extends StatelessWidget {
                 case '/adjustment':
                   return MaterialPageRoute(
                       builder: (_) => const InventoryAdjustmentScreen());
+                case '/product-form':
+                  final product = settings.arguments as Product?;
+                  return MaterialPageRoute(
+                      builder: (_) => ProductFormScreen(product: product));
 
                 case AppRoutes.debtDetail:
                   final args = settings.arguments;
@@ -145,7 +158,6 @@ class BizFlowApp extends StatelessWidget {
                   );
 
                 default:
-                  // Fallback for missing routes
                   return MaterialPageRoute(
                     builder: (_) => authState.isLoggedIn
                         ? const DashboardScreen()

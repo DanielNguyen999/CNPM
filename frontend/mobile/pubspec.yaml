@@ -20,6 +20,11 @@ dependencies:
   flutter_animate: ^4.2.0
   fluttertoast: ^8.2.4
   jwt_decoder: ^2.0.1
+  record: ^5.1.0
+  path_provider: ^2.1.2
+  permission_handler: ^11.1.0
+  fl_chart: ^0.65.0
+  universal_html: ^2.3.0
 
 dev_dependencies:
   flutter_test:

@@ -10,7 +10,7 @@ class ReportsService {
   Future<DashboardStats> getDashboardStats({String? date}) async {
     final response =
         await apiClient.dio.get('/reports/dashboard', queryParameters: {
-      if (date != null) 'date': date,
+      if (date != null) 'date': date.split('T')[0],
     });
     return DashboardStats.fromJson(response.data);
   }

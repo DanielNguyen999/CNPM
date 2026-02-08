@@ -3,12 +3,19 @@ import 'package:provider/provider.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../core/auth/auth_state.dart';
 import '../../services/reports_service.dart';
+import '../../services/sse_service.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/dashboard/notification_bell.dart';
 import '../orders/order_list_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/utils/formatters.dart';
+import '../admin/admin_dashboard_screen.dart';
+import '../customer_portal/customer_home_screen.dart';
+import '../../widgets/dashboard/revenue_chart.dart';
+import '../../widgets/dashboard/top_products_list.dart';
+import '../../widgets/dashboard/recent_activity_list.dart';
+import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,6 +29,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _totalDebt = 0;
   int _lowStockCount = 0;
   String? _aiSummary;
+  List<dynamic> _revenueData = [];
+  List<dynamic> _topProducts = [];
+  List<dynamic> _recentActivity = [];
 
   @override
   void initState() {
@@ -29,6 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadStats();
     });
+    _setupSSE();
   }
 
   Future<void> _loadStats() async {
@@ -36,19 +47,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final reportsService =
           Provider.of<ReportsService>(context, listen: false);
-      final stats = await reportsService.getDashboardStats();
+
+      // Load all data in parallel
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 6));
+      final endDate = now;
+      final dateFormat = DateFormat('yyyy-MM-dd');
+
+      final results = await Future.wait([
+        reportsService.getDashboardStats(),
+        reportsService.getRevenueReport(
+            dateFormat.format(startDate), dateFormat.format(endDate)),
+        reportsService.getTopProducts(),
+      ]);
+
+      final stats = results[0] as DashboardStats;
+      final revenue = results[1] as List<dynamic>;
+      final products = results[2] as List<dynamic>;
+
       if (mounted) {
         setState(() {
           _todayRevenue = stats.todayRevenue;
           _totalDebt = stats.totalDebtPending;
           _lowStockCount = stats.lowStockCount;
           _aiSummary = stats.aiSummary;
+          _revenueData = revenue;
+          _topProducts = products;
+          _recentActivity = stats.recentActivity ?? [];
         });
       }
     } catch (e) {
       debugPrint("Error loading dashboard stats: $e");
-      Fluttertoast.showToast(msg: "Lỗi đồng bộ dữ liệu: $e");
+      Fluttertoast.showToast(msg: "Lỗi đồng bộ dữ liệu");
     }
+  }
+
+  void _setupSSE() {
+    final sseService = Provider.of<SSEService>(context, listen: false);
+    sseService.events.listen((event) {
+      if (event['type'] == 'ORDER_CREATED' ||
+          event['type'] == 'ORDER_UPDATED') {
+        _loadStats();
+        Fluttertoast.showToast(msg: "Dữ liệu mới đã được cập nhật");
+      }
+    });
   }
 
   @override
@@ -56,6 +98,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final authState = Provider.of<AuthState>(context);
       final user = authState.user;
+
+      if (user?.role == 'ADMIN') {
+        return const AdminDashboardScreen();
+      }
+
+      if (user?.role == 'CUSTOMER') {
+        return const CustomerHomeScreen();
+      }
+
       final name = user?.fullName ?? "Người dùng";
 
       return AppScaffold(
@@ -92,7 +143,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 24),
                 if (_aiSummary != null && _aiSummary!.isNotEmpty)
                   _buildAISummary(),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+                if (_revenueData.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: RevenueChart(data: _revenueData),
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Text("QUẢN LÝ CỬA HÀNG",
@@ -104,6 +162,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildFullServiceGrid(),
+                const SizedBox(height: 24),
+                if (_topProducts.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TopProductsList(data: _topProducts),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+                if (_recentActivity.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: RecentActivityList(activities: _recentActivity),
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 const SizedBox(height: 40),
               ],
             ),

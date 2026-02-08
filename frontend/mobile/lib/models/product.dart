@@ -9,6 +9,8 @@ class Product {
   final double? availableQuantity;
   final String? imageUrl;
   final List<ProductUnit>? units;
+  final int? categoryId;
+  final String? unit;
 
   Product({
     required this.id,
@@ -21,6 +23,8 @@ class Product {
     this.availableQuantity,
     this.imageUrl,
     this.units,
+    this.categoryId,
+    this.unit,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -37,8 +41,13 @@ class Product {
       units: json['units'] != null
           ? (json['units'] as List).map((i) => ProductUnit.fromJson(i)).toList()
           : null,
+      categoryId: _parseInt(json['category_id']),
+      unit: json['unit'],
     );
   }
+
+  // Getters for form compatibility
+  String get sku => productCode;
 
   static double _parseDouble(dynamic value) {
     if (value == null) return 0.0;

@@ -162,6 +162,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 isLoading: _isLoading,
                 onPressed: _handleLogin,
               ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/forgot-password');
+                  },
+                  child: const Text(
+                    "Quên mật khẩu?",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               const Center(
                 child: Text(

@@ -26,4 +26,12 @@ class AuthService {
       rethrow;
     }
   }
+
+  Future<void> forgotPassword(String email) async {
+    try {
+      await apiClient.dio.post('/auth/forgot-password', data: {'email': email});
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

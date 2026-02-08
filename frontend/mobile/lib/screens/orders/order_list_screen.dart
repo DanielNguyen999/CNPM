@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../services/order_service.dart';
+import '../../services/sse_service.dart';
 import '../../models/order.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/formatters.dart';
@@ -29,6 +30,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
   void initState() {
     super.initState();
     _loadOrders();
+    // Defer SSE setup to ensure Provider is ready if needed, implies context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) => _setupSSE());
   }
 
   @override
@@ -36,6 +39,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _setupSSE() {
+    final sseService = Provider.of<SSEService>(context, listen: false);
+    sseService.events.listen((event) {
+      if (event['type'] == 'ORDER_CREATED' ||
+          event['type'] == 'ORDER_UPDATED') {
+        _loadOrders();
+        // Optional: Show toast or indicator
+      }
+    });
   }
 
   Future<void> _loadOrders() async {

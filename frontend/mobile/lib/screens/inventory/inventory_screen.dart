@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/common/loading_skeleton.dart';
 import '../../widgets/common/empty_state.dart';
+import 'widgets/stock_adjustment_sheet.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -170,102 +171,147 @@ class _InventoryScreenState extends State<InventoryScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.slate200),
       ),
-      child: ClipRRect(
+      child: InkWell(
+        onTap: () async {
+          // Show options: Adjust Stock or Edit Product
+          showModalBottomSheet(
+            context: context,
+            builder: (context) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.edit, color: AppColors.primary),
+                  title: const Text('Chỉnh sửa thông tin'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final result = await Navigator.pushNamed(
+                        context, '/product-form',
+                        arguments: product);
+                    if (result == true) {
+                      _loadProducts(_searchController.text);
+                    }
+                  },
+                ),
+                ListTile(
+                  leading:
+                      const Icon(Icons.inventory, color: AppColors.primary),
+                  title: const Text('Điều chỉnh tồn kho'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => StockAdjustmentSheet(
+                        product: product,
+                        onSuccess: () => _loadProducts(_searchController.text),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(16),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Product Image Placeholder/Thumbnail
-              Container(
-                width: 80,
-                color: AppColors.slate100,
-                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        product.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                            Icons.image_not_supported_outlined,
-                            color: AppColors.slate400),
-                      )
-                    : const Icon(Icons.inventory_2_outlined,
-                        color: AppColors.slate400),
-              ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Product Image Placeholder/Thumbnail
+                Container(
+                  width: 80,
+                  color: AppColors.slate100,
+                  child:
+                      product.imageUrl != null && product.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              product.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.image_not_supported_outlined,
+                                  color: AppColors.slate400),
+                            )
+                          : const Icon(Icons.inventory_2_outlined,
+                              color: AppColors.slate400),
+                ),
 
-              // Product Details
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "SKU: ${product.productCode}",
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                      const Spacer(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            AppFormatters.formatCurrency(product.price),
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                // Product Details
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "SKU: ${product.productCode}",
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                        const Spacer(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              AppFormatters.formatCurrency(product.price),
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: (isLowStock
-                                      ? AppColors.error
-                                      : AppColors.success)
-                                  .withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isLowStock
-                                      ? Icons.warning_amber_rounded
-                                      : Icons.check_circle_outline,
-                                  size: 14,
-                                  color: isLowStock
-                                      ? AppColors.error
-                                      : AppColors.success,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  "${product.availableQuantity?.toInt() ?? 0} ${product.units?.isNotEmpty == true ? product.units!.first.name : ''}",
-                                  style: TextStyle(
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: (isLowStock
+                                        ? AppColors.error
+                                        : AppColors.success)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isLowStock
+                                        ? Icons.warning_amber_rounded
+                                        : Icons.check_circle_outline,
+                                    size: 14,
                                     color: isLowStock
                                         ? AppColors.error
                                         : AppColors.success,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "${product.availableQuantity?.toInt() ?? 0} ${product.units?.isNotEmpty == true ? product.units!.first.name : ''}",
+                                    style: TextStyle(
+                                      color: isLowStock
+                                          ? AppColors.error
+                                          : AppColors.success,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
