@@ -108,8 +108,7 @@ class TopProductsList extends StatelessWidget {
           ),
         ),
         Text(
-          AppFormatters.formatCurrency(
-              revenue is int ? revenue.toDouble() : revenue),
+          AppFormatters.formatCurrency(_parseDouble(revenue)),
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
@@ -118,5 +117,12 @@ class TopProductsList extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 }

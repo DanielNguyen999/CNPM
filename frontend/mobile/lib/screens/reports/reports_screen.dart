@@ -219,7 +219,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     // Find max revenue for scaling
     double maxRev = 1.0;
     for (var d in _revenueData) {
-      double rev = (d['revenue'] as num?)?.toDouble() ?? 0.0;
+      double rev = _parseDouble(d['revenue']);
       if (rev > maxRev) maxRev = rev;
     }
 
@@ -237,7 +237,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final item = _revenueData[index];
-          final revenue = (item['revenue'] as num?)?.toDouble() ?? 0.0;
+          final revenue = _parseDouble(item['revenue']);
           final dateStr = item['date'] as String;
           // Shorten date (e.g., 2024-05-20 -> 20/05)
           final shortDate =
@@ -314,8 +314,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return Column(
       children: _topProducts.map((p) {
-        final revenue = (p['total_revenue'] as num?)?.toDouble() ?? 0.0;
-        final sold = (p['total_sold'] as num?)?.toDouble() ?? 0.0;
+        final revenue = _parseDouble(p['total_revenue']);
+        final sold = _parseDouble(p['total_sold']);
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -384,5 +384,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
       ),
     );
+  }
+
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 }

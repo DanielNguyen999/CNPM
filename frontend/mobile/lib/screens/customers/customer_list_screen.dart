@@ -41,27 +41,28 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     try {
       final customerService =
           Provider.of<CustomerService>(context, listen: false);
-      final results = await customerService.listCustomers();
-      // Logic lọc tạm thời ở frontend nếu API chưa hỗ trợ search sâu
-      final items =
-          (results['items'] as List).map((e) => Customer.fromJson(e)).toList();
+
+      // Call API with search query if exists
+      final results = await customerService.listCustomers(
+        q: _searchController.text.isNotEmpty ? _searchController.text : null,
+        pageSize: 100, // Load more items
+      );
+
+      // Parse items - they're already Customer objects from service
+      final items = results['items'] as List<Customer>;
 
       if (mounted) {
         setState(() {
           _customers = items;
-          if (_searchController.text.isNotEmpty) {
-            _customers = items
-                .where((c) =>
-                    c.fullName
-                        .toLowerCase()
-                        .contains(_searchController.text.toLowerCase()) ||
-                    (c.phone?.contains(_searchController.text) ?? false))
-                .toList();
-          }
         });
       }
     } catch (e) {
-      debugPrint("Error: $e");
+      debugPrint("Error loading customers: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lỗi tải danh sách khách hàng: $e")),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
