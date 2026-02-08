@@ -149,6 +149,7 @@ class CreateOrderUseCase:
             order_code = await self.order_repo.generate_order_code(owner_id)
             
             # 4. Create order
+            from infrastructure.database.models import get_vietnam_time
             order = Order(
                 id=None,
                 owner_id=owner_id,
@@ -157,7 +158,7 @@ class CreateOrderUseCase:
                 customer_name=customer.full_name, # Populate display field
                 customer_phone=customer.phone,    # Populate display field
                 created_by=created_by,
-                order_date=datetime.utcnow(),
+                order_date=get_vietnam_time(),
                 order_type=OrderType.SALE,
                 tax_rate=tax_rate,
                 discount_amount=discount_amount,
@@ -200,7 +201,7 @@ class CreateOrderUseCase:
             # 8. Create debt record if needed - Uses flush internally now
             if created_order.has_debt():
                 from domain.entities.debt import Debt, DebtStatus
-                from datetime import date, timedelta
+                from infrastructure.database.models import get_vietnam_time
                 
                 debt = Debt(
                     id=None,
@@ -209,7 +210,7 @@ class CreateOrderUseCase:
                     order_id=created_order.id,
                     debt_amount=created_order.get_debt_amount(),
                     remaining_amount=created_order.get_debt_amount(),
-                    due_date=date.today() + timedelta(days=30),  # 30 days default
+                    due_date=get_vietnam_time().date() + timedelta(days=30),  # 30 days default
                     status=DebtStatus.PENDING,
                     notes=f"From order {created_order.order_code}"
                 )

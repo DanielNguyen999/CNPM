@@ -113,6 +113,11 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
 
     async def create(self, customer: CustomerEntity) -> CustomerEntity:
         """Create a new customer"""
+        # Cap credit_limit to avoid database overflow (Decimal 15,2)
+        credit_limit = customer.credit_limit
+        if credit_limit and credit_limit > Decimal("9999999999999"):
+            credit_limit = Decimal("9999999999999")
+
         customer_model = CustomerModel(
             owner_id=customer.owner_id,
             customer_code=customer.customer_code,
@@ -122,7 +127,7 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
             address=customer.address,
             customer_type=customer.customer_type.value,
             tax_code=customer.tax_code,
-            credit_limit=customer.credit_limit,
+            credit_limit=credit_limit,
             is_active=customer.is_active
         )
         

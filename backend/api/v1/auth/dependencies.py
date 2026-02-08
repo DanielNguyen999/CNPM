@@ -11,7 +11,7 @@ from infrastructure.database.models import User as UserModel, Owner as OwnerMode
 from api.v1.auth.utils import decode_access_token
 
 # Security scheme
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 class CurrentUser:
