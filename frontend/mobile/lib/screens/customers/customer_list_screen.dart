@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
+import 'customer_form_screen.dart';
 import '../../services/customer_service.dart';
 import '../../models/customer.dart';
 import '../../core/constants/app_colors.dart';
@@ -80,8 +81,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.person_add_alt_1),
-          onPressed: () {
-            // Sẽ làm màn hình Thêm khách sau
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const CustomerFormScreen()),
+            );
+            if (result == true) _loadCustomers();
           },
         ),
       ],
@@ -182,8 +188,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           ],
         ),
         trailing: const Icon(Icons.chevron_right, color: AppColors.slate300),
-        onTap: () {
-          // Xem chi tiết khách nếu cần
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => CustomerFormScreen(customer: customer)),
+          );
+          if (result == true) _loadCustomers();
         },
       ),
     );

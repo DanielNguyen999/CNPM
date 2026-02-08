@@ -31,16 +31,8 @@ async def create_customer(
         )
     
     # Validate required fields
-    if not customer_data.phone:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Số điện thoại là bắt buộc"
-        )
-    if not customer_data.email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email là bắt buộc"
-        )
+    # Phone/Email are optional in database, relaxing validation if business wants
+    pass
     
     customer_repo = SQLAlchemyCustomerRepository(db)
     
@@ -159,23 +151,16 @@ async def list_customers(
 async def update_customer(
     customer_id: int,
     customer_data: CustomerCreate,
-    current_user: CurrentUser = Depends(require_role("OWNER", "ADMIN")), # EMPLOYEE forbidden
+    current_user: CurrentUser = Depends(require_role("OWNER", "ADMIN", "EMPLOYEE")),
+
     db: Session = Depends(get_db)
 ):
     if not current_user.owner_id:
         raise HTTPException(status_code=403, detail="Truy cập bị từ chối")
     
     # Validate required fields
-    if not customer_data.phone:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Số điện thoại là bắt buộc"
-        )
-    if not customer_data.email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email là bắt buộc"
-        )
+    # Phone/Email are optional in database
+    pass
         
     customer_repo = SQLAlchemyCustomerRepository(db)
     customer = await customer_repo.get_by_id(customer_id, current_user.owner_id)

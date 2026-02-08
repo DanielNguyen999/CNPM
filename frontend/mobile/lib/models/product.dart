@@ -25,19 +25,33 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'] ?? 0,
+      id: _parseInt(json['id']),
       productCode: json['product_code'] ?? '',
       name: json['name'] ?? '',
       description: json['description'],
       category: json['category'],
-      price: (json['base_price'] ?? json['price'] ?? 0).toDouble(),
-      costPrice: (json['cost_price'] ?? 0).toDouble(),
-      availableQuantity: (json['available_quantity'] ?? 0).toDouble(),
+      price: _parseDouble(json['base_price'] ?? json['price']),
+      costPrice: _parseDouble(json['cost_price']),
+      availableQuantity: _parseDouble(json['available_quantity']),
       imageUrl: json['image_url'],
       units: json['units'] != null
           ? (json['units'] as List).map((i) => ProductUnit.fromJson(i)).toList()
           : null,
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }
 
@@ -56,10 +70,24 @@ class ProductUnit {
 
   factory ProductUnit.fromJson(Map<String, dynamic> json) {
     return ProductUnit(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      conversionRate: (json['conversion_rate'] ?? 1.0).toDouble(),
-      price: (json['price'] ?? 0).toDouble(),
+      id: _parseInt(json['id']),
+      name: json['unit_name'] ?? json['name'] ?? '',
+      conversionRate: _parseDouble(json['conversion_rate'] ?? 1.0),
+      price: _parseDouble(json['price']),
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }

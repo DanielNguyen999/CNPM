@@ -17,12 +17,26 @@ class Inventory {
 
   factory Inventory.fromJson(Map<String, dynamic> json) {
     return Inventory(
-      productId: json['product_id'] ?? 0,
+      productId: _parseInt(json['product_id']),
       productName: json['product_name'] ?? '',
       productCode: json['product_code'] ?? '',
-      availableQuantity: (json['available_quantity'] ?? 0).toDouble(),
+      availableQuantity: _parseDouble(json['available_quantity']),
       unitName: json['unit_name'] ?? '',
       isLowStock: json['is_low_stock'] ?? false,
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }

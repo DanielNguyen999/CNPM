@@ -1,7 +1,8 @@
 """
 FastAPI Main Application
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from config.settings import settings
 from middleware.idempotency import IdempotencyMiddleware
@@ -21,54 +22,74 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware
+# Helper to add CORS headers to responses (Forced for robustness)
+def add_cors_headers_to_response(response: Response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Expose-Headers"] = "*"
+    return response
+
+@app.middleware("http")
+async def cors_handler(request: Request, call_next):
+    if request.method == "OPTIONS":
+        response = Response()
+        return add_cors_headers_to_response(response)
+    
+    try:
+        response = await call_next(request)
+        return add_cors_headers_to_response(response)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        resp = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error", "success": False}
+        )
+        return add_cors_headers_to_response(resp)
+
+# Standard Middlewares
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False, # Explicitly false when using *
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Idempotency Middleware for Orders
 app.add_middleware(IdempotencyMiddleware, redis_url=settings.redis_url)
 
-# Global Exception Handler for Vietnamese JSON responses
-from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse
-from sqlalchemy.exc import OperationalError
-
+# Global Exception Handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
+    resp = JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail, "success": False},
     )
+    return add_cors_headers_to_response(resp)
 
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
-    # Mapping common English errors to Vietnamese if needed, or just passing detail
     detail = str(exc)
-    # Simple mapping for common ones
     if "Insufficient stock" in detail:
         detail = "Không đủ tồn kho để thực hiện giao dịch này"
     elif "not found" in detail.lower():
         detail = "Dữ liệu không tồn tại"
         
-    return JSONResponse(
+    resp = JSONResponse(
         status_code=400,
         content={"detail": detail, "success": False},
     )
+    return add_cors_headers_to_response(resp)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # Log the error here in production
     import traceback
     traceback.print_exc()
-    return JSONResponse(
+    resp = JSONResponse(
         status_code=500,
         content={"detail": "Lỗi hệ thống nghiêm trọng. Vui lòng thử lại sau.", "success": False},
     )
+    return add_cors_headers_to_response(resp)
 
 
 @app.get("/")

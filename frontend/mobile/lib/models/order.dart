@@ -21,17 +21,31 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['id'] ?? 0,
+      id: _parseInt(json['id']),
       orderCode: json['order_code'] ?? '',
-      customerId: json['customer_id'],
-      totalAmount: (json['total_amount'] ?? 0).toDouble(),
-      paidAmount: (json['paid_amount'] ?? 0).toDouble(),
+      customerId: _parseInt(json['customer_id']),
+      totalAmount: _parseDouble(json['total_amount']),
+      paidAmount: _parseDouble(json['paid_amount']),
       paymentStatus: json['payment_status'] ?? 'PENDING',
       createdAt: json['created_at'] ?? '',
       items: json['items'] != null
           ? (json['items'] as List).map((i) => OrderItem.fromJson(i)).toList()
           : null,
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {
@@ -67,13 +81,27 @@ class OrderItem {
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
-      id: json['id'] ?? 0,
-      productId: json['product_id'] ?? 0,
+      id: _parseInt(json['id']),
+      productId: _parseInt(json['product_id']),
       productName: json['product_name'],
-      quantity: (json['quantity'] ?? 0).toDouble(),
-      unitPrice: (json['unit_price'] ?? 0).toDouble(),
-      lineTotal: (json['line_total'] ?? 0).toDouble(),
+      quantity: _parseDouble(json['quantity']),
+      unitPrice: _parseDouble(json['unit_price']),
+      lineTotal: _parseDouble(json['line_total']),
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {
@@ -120,11 +148,25 @@ class DraftItem {
 
   factory DraftItem.fromJson(Map<String, dynamic> json) {
     return DraftItem(
-      productId: json['product_id'] ?? 0,
+      productId: _parseInt(json['product_id']),
       productName: json['product_name'] ?? 'Sản phẩm',
-      quantity: (json['quantity'] ?? 0).toDouble(),
-      unitId: json['unit_id'] ?? 0,
-      unitPrice: (json['unit_price'] ?? 0).toDouble(),
+      quantity: _parseDouble(json['quantity']),
+      unitId: _parseInt(json['unit_id']),
+      unitPrice: _parseDouble(json['unit_price']),
     );
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }

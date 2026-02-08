@@ -6,15 +6,20 @@ class ProductService {
 
   ProductService(this.apiClient);
 
-  Future<List<Product>> listProducts({String? search, int limit = 100, int skip = 0}) async {
+  Future<List<Product>> listProducts(
+      {String? search, int limit = 100, int skip = 0}) async {
     try {
       final response = await apiClient.dio.get('/products', queryParameters: {
         if (search != null) 'search': search,
-        'limit': limit,
-        'skip': skip,
+        'page': (skip ~/ limit) + 1,
+        'page_size': limit,
       });
-      
-      return (response.data as List).map((i) => Product.fromJson(i)).toList();
+
+      final data = response.data;
+      if (data is Map && data.containsKey('items')) {
+        return (data['items'] as List).map((i) => Product.fromJson(i)).toList();
+      }
+      return (data as List).map((i) => Product.fromJson(i)).toList();
     } catch (e) {
       rethrow;
     }

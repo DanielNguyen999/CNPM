@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/api/api_client.dart';
-import 'package:intl/date_symbol_data_local.dart';
+// import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
+  // Global Error Handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint("GLOBAL ERROR: ${details.exception}");
+  };
+
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize date formatting for intl
-  await initializeDateFormatting('vi_VN', null);
+  // Skip intl for now to ensure stability
 
   final apiClient = ApiClient();
 

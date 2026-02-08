@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import '../core/auth/auth_state.dart';
 import '../core/constants/env.dart';
@@ -17,14 +17,8 @@ class SSEService {
   }
 
   void _init() {
-    authState.addListener(() {
-      if (authState.isLoggedIn && _subscription == null) {
-        startListening();
-      } else if (!authState.isLoggedIn && _subscription != null) {
-        stopListening();
-      }
-    });
-
+    // Only verify status on creation.
+    // ProxyProvider will handle re-creation/updates if AuthState changes.
     if (authState.isLoggedIn) {
       startListening();
     }

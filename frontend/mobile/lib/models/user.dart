@@ -21,15 +21,22 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? json['user_id'] ?? 0,
+      id: _parseInt(json['id'] ?? json['user_id']),
       email: json['email'] ?? '',
       fullName: json['full_name'] ?? '',
       role: json['role'] ?? 'EMPLOYEE',
-      ownerId: json['owner_id'],
-      customerId: json['customer_id'],
+      ownerId: _parseInt(json['owner_id']),
+      customerId: _parseInt(json['customer_id']),
       phone: json['phone'],
       isActive: json['is_active'] ?? true,
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {

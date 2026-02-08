@@ -28,22 +28,24 @@ app = FastAPI(
 # 1. Idempotency Middleware (Inner)
 # app.add_middleware(IdempotencyMiddleware, redis_url=settings.redis_url)
 
-# 2. CORS middleware (Outer)
-development_origins = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-]
-allowed_origins = ["*"] # list(set(settings.cors_origins_list + development_origins))
+# 2. Custom CORS middleware (Outer) - FORCE HEADERS ON ALL RESPONSES
+from fastapi import Request, Response
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+    
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
 
 
 

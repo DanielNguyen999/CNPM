@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../../core/auth/auth_state.dart';
 import '../../services/reports_service.dart';
 import '../../widgets/common/app_scaffold.dart';
@@ -20,6 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _todayRevenue = 0;
   double _totalDebt = 0;
   int _lowStockCount = 0;
+  String? _aiSummary;
 
   @override
   void initState() {
@@ -40,10 +42,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _todayRevenue = stats.todayRevenue;
           _totalDebt = stats.totalDebtPending;
           _lowStockCount = stats.lowStockCount;
+          _aiSummary = stats.aiSummary;
         });
       }
     } catch (e) {
       debugPrint("Error loading dashboard stats: $e");
+      Fluttertoast.showToast(msg: "Lỗi đồng bộ dữ liệu: $e");
     }
   }
 
@@ -85,6 +89,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _buildModernHeader(name),
                 const SizedBox(height: 20),
                 _buildStatsSection(),
+                const SizedBox(height: 24),
+                if (_aiSummary != null && _aiSummary!.isNotEmpty)
+                  _buildAISummary(),
                 const SizedBox(height: 32),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
@@ -119,7 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
             child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?",
                 style: const TextStyle(
                     color: AppColors.primary, fontWeight: FontWeight.bold)),
@@ -135,6 +142,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAISummary() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                "AI TỔNG HỢP",
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _aiSummary!,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              height: 1.6,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -165,9 +228,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       width: 140,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.1)),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,9 +299,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withOpacity(0.1)),
+              border: Border.all(color: color.withValues(alpha: 0.1)),
             ),
             child: Icon(icon, color: color, size: 24),
           ),

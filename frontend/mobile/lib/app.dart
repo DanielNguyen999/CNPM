@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'core/auth/auth_state.dart';
 import 'core/api/api_client.dart';
 import 'services/auth_service.dart';
@@ -12,6 +12,7 @@ import 'services/reports_service.dart';
 import 'services/notification_service.dart';
 import 'services/sse_service.dart';
 import 'providers/notification_provider.dart';
+
 import 'core/constants/app_routes.dart';
 import 'core/constants/app_colors.dart';
 import 'screens/auth/login_screen.dart';
@@ -71,6 +72,7 @@ class BizFlowApp extends StatelessWidget {
         builder: (context, authState, child) {
           if (authState.isLoading) {
             return const MaterialApp(
+              debugShowCheckedModeBanner: false,
               home: Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               ),
@@ -83,38 +85,73 @@ class BizFlowApp extends StatelessWidget {
             theme: ThemeData(
               useMaterial3: true,
               colorSchemeSeed: AppColors.primary,
-              textTheme: GoogleFonts.interTextTheme(),
+              // Fix Google Fonts or typography if needed later
             ),
-            initialRoute:
-                authState.isLoggedIn ? AppRoutes.dashboard : AppRoutes.login,
-            routes: {
-              AppRoutes.login: (context) => const LoginScreen(),
-              AppRoutes.dashboard: (context) => const DashboardScreen(),
-              AppRoutes.pos: (context) => const QuickOrderScreen(),
-              AppRoutes.inventory: (context) => const InventoryScreen(),
-              AppRoutes.debts: (context) => const DebtCollectionScreen(),
-              '/customers': (context) => const CustomerListScreen(),
-              '/orders': (context) => const OrderListScreen(),
-              '/reports': (context) => const ReportsScreen(),
-              '/profile': (context) => const ProfileScreen(),
-              '/suppliers': (context) => const SupplierListScreen(),
-              '/cashbook': (context) => const CashbookScreen(),
-              '/adjustment': (context) => const InventoryAdjustmentScreen(),
-            },
+            // Home logic based on auth state
+            home: authState.isLoggedIn
+                ? const DashboardScreen()
+                : const LoginScreen(),
+
+            // Safer dynamic routing using onGenerateRoute
             onGenerateRoute: (settings) {
-              if (settings.name == AppRoutes.debtDetail) {
-                final debtId = settings.arguments as int;
-                return MaterialPageRoute(
-                  builder: (context) => DebtDetailScreen(debtId: debtId),
-                );
+              switch (settings.name) {
+                case AppRoutes.login:
+                  return MaterialPageRoute(builder: (_) => const LoginScreen());
+                case AppRoutes.dashboard:
+                  return MaterialPageRoute(
+                      builder: (_) => const DashboardScreen());
+                case AppRoutes.pos:
+                  return MaterialPageRoute(
+                      builder: (_) => const QuickOrderScreen());
+                case AppRoutes.inventory:
+                  return MaterialPageRoute(
+                      builder: (_) => const InventoryScreen());
+                case AppRoutes.debts:
+                  return MaterialPageRoute(
+                      builder: (_) => const DebtCollectionScreen());
+                case '/customers':
+                  return MaterialPageRoute(
+                      builder: (_) => const CustomerListScreen());
+                case '/orders':
+                  return MaterialPageRoute(
+                      builder: (_) => const OrderListScreen());
+                case '/reports':
+                  return MaterialPageRoute(
+                      builder: (_) => const ReportsScreen());
+                case '/profile':
+                  return MaterialPageRoute(
+                      builder: (_) => const ProfileScreen());
+                case '/suppliers':
+                  return MaterialPageRoute(
+                      builder: (_) => const SupplierListScreen());
+                case '/cashbook':
+                  return MaterialPageRoute(
+                      builder: (_) => const CashbookScreen());
+                case '/adjustment':
+                  return MaterialPageRoute(
+                      builder: (_) => const InventoryAdjustmentScreen());
+
+                case AppRoutes.debtDetail:
+                  final args = settings.arguments;
+                  final debtId = args is int ? args : 0;
+                  return MaterialPageRoute(
+                    builder: (_) => DebtDetailScreen(debtId: debtId),
+                  );
+                case '/order-detail':
+                  final args = settings.arguments;
+                  final orderId = args is int ? args : 0;
+                  return MaterialPageRoute(
+                    builder: (_) => OrderDetailScreen(orderId: orderId),
+                  );
+
+                default:
+                  // Fallback for missing routes
+                  return MaterialPageRoute(
+                    builder: (_) => authState.isLoggedIn
+                        ? const DashboardScreen()
+                        : const LoginScreen(),
+                  );
               }
-              if (settings.name == '/order-detail') {
-                final orderId = settings.arguments as int;
-                return MaterialPageRoute(
-                  builder: (context) => OrderDetailScreen(orderId: orderId),
-                );
-              }
-              return null;
             },
           );
         },

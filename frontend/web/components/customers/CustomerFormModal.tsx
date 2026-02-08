@@ -27,8 +27,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 const customerSchema = z.object({
     customer_code: z.string().default("AUTO"),
     full_name: z.string().min(2, "Tên phải ít nhất 2 ký tự"),
-    phone: z.string().min(10, "Số điện thoại phải ít nhất 10 số"),
-    email: z.string().email("Email không hợp lệ"),
+    phone: z.string().optional().or(z.string().min(10, "Số điện thoại phải ít nhất 10 số").max(15)),
+    email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
     address: z.string().optional(),
     customer_type: z.string().default("INDIVIDUAL"),
     tax_code: z.string().optional(),

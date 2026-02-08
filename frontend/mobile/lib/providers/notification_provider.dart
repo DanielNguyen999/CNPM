@@ -18,10 +18,9 @@ class NotificationProvider extends ChangeNotifier {
 
   NotificationProvider(this._service, {bool isLoggedIn = false})
       : _isLoggedIn = isLoggedIn {
-    if (_isLoggedIn) {
-      fetchNotifications();
-      startPolling();
-    }
+    // Correctly initialize but DO NOT fetch immediately in constructor
+    // to avoid 'setState() or markNeedsBuild() called during build' errors.
+    // The UI or AuthState listener should trigger the first fetch.
   }
 
   void updateAuthStatus(bool status) {

@@ -85,9 +85,22 @@ class CreateOrderUseCase:
         
         try:
             # 1. Validate customer
-            customer = await self.customer_repo.get_by_id(customer_id, owner_id)
-            if not customer:
-                raise ValueError(f"Customer {customer_id} not found")
+            if customer_id is None:
+                # Find default retail customer for this owner
+                from infrastructure.database.models import Customer as CustomerModel
+                customer_record = db.query(CustomerModel).filter(
+                    CustomerModel.owner_id == owner_id
+                ).order_by(CustomerModel.id.asc()).first() # Usually the first created is Khách lẻ
+                
+                if not customer_record:
+                    raise ValueError(f"No default customer found for owner {owner_id}")
+                
+                customer_id = customer_record.id
+                customer = await self.customer_repo.get_by_id(customer_id, owner_id)
+            else:
+                customer = await self.customer_repo.get_by_id(customer_id, owner_id)
+                if not customer:
+                    raise ValueError(f"Customer {customer_id} not found")
             
             if not customer.is_active:
                 raise ValueError(f"Customer {customer.full_name} is inactive")

@@ -13,6 +13,8 @@ class ApiClient {
       baseUrl: Env.baseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
+      contentType: 'application/json',
+      responseType: ResponseType.json,
     ));
 
     dio.interceptors.add(InterceptorsWrapper(
@@ -27,36 +29,37 @@ class ApiClient {
         if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
           _authState?.logout();
         }
-        
+
         // Map localized error messages
         String message = "Không thể kết nối máy chủ.";
         if (e.type == DioExceptionType.connectionTimeout) {
           message = "Hết thời gian kết nối.";
         } else if (e.response != null) {
-          switch (e.response!.statusCode) {
-            case 401:
-              message = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
-              break;
-            case 403:
-              message = "Bạn không có quyền thực hiện thao tác này.";
-              break;
-            case 400:
-              message = e.response!.data['detail'] ?? "Yêu cầu không hợp lệ.";
-              break;
-            case 500:
-              message = "Hệ thống đang bận. Vui lòng thử lại.";
-              break;
+          final dynamic data = e.response!.data;
+          if (data is Map && data.containsKey('detail')) {
+            message = data['detail'].toString();
+          } else {
+            switch (e.response!.statusCode) {
+              case 401:
+                message = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
+                break;
+              case 403:
+                message = "Bạn không có quyền thực hiện thao tác này.";
+                break;
+              case 500:
+                message = "Lỗi hệ thống máy chủ.";
+                break;
+            }
           }
         }
-        
-        // Wrap error with localized message
+
         final error = DioException(
           requestOptions: e.requestOptions,
           response: e.response,
           type: e.type,
           error: message,
         );
-        
+
         return handler.next(error);
       },
     ));

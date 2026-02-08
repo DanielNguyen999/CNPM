@@ -63,42 +63,49 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
   }
 
   void _showCustomerSearch() async {
-    final customerService =
-        Provider.of<CustomerService>(context, listen: false);
-    final response = await customerService.listCustomers();
-    final List<Customer> customers = response['items'];
+    try {
+      final customerService =
+          Provider.of<CustomerService>(context, listen: false);
+      final response = await customerService.listCustomers();
+      // Safely extract and cast items
+      final List<Customer> customers =
+          (response['items'] as List).map((e) => e as Customer).toList();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Text("Chọn khách hàng",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: customers.length,
-                itemBuilder: (context, index) {
-                  final c = customers[index];
-                  return ListTile(
-                    title: Text(c.fullName),
-                    subtitle: Text(c.phone ?? ''),
-                    onTap: () {
-                      setState(() => _selectedCustomer = c);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Text("Chọn khách hàng",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: customers.length,
+                  itemBuilder: (context, index) {
+                    final c = customers[index];
+                    return ListTile(
+                      title: Text(c.fullName),
+                      subtitle: Text(c.phone ?? ''),
+                      onTap: () {
+                        setState(() => _selectedCustomer = c);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint("Error loading customers: $e");
+      Fluttertoast.showToast(msg: "Không thể tải danh sách khách hàng");
+    }
   }
 
   Future<void> _handleCheckout(String method, double paid, bool isDebt) async {
@@ -222,7 +229,7 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
           if (_selectedCustomer != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               child: Row(
                 children: [
                   const Icon(Icons.person, size: 16, color: AppColors.primary),
@@ -257,7 +264,7 @@ class _QuickOrderScreenState extends State<QuickOrderScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -4),
                 ),

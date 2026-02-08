@@ -243,7 +243,7 @@ class OrderItemResponse(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    customer_id: int
+    customer_id: Optional[int] = None
     items: List[OrderItemCreate]
     tax_rate: Decimal = Field(default=Decimal("10"), ge=0, le=100)
     discount_amount: Decimal = Field(default=Decimal("0"), ge=0)

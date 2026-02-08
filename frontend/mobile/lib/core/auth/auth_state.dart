@@ -5,7 +5,7 @@ import '../../models/user.dart';
 
 class AuthState extends ChangeNotifier {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  
+
   String? _token;
   User? _user;
   bool _isLoading = true;
@@ -27,29 +27,32 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> loadSession() async {
-    _isLoading = true;
-    notifyListeners();
+    // _isLoading is already true by default, no need to notify yet
 
-    _token = await _storage.read(key: 'jwt_token');
-    
-    if (_token != null) {
-      if (JwtUtils.isExpired(_token!)) {
-        await logout();
-      } else {
-        final decoded = JwtUtils.decode(_token!);
-        // Fallback user if me() not called yet
-        _user = User.fromJson({
-          'id': decoded['user_id'],
-          'email': decoded['email'],
-          'role': decoded['role'],
-          'owner_id': decoded['owner_id'],
-          'full_name': 'User', // Placeholder
-        });
+    try {
+      _token = await _storage.read(key: 'jwt_token');
+
+      if (_token != null) {
+        if (JwtUtils.isExpired(_token!)) {
+          await logout();
+        } else {
+          final decoded = JwtUtils.decode(_token!);
+          _user = User.fromJson({
+            'id': decoded['user_id'],
+            'email': decoded['email'],
+            'role': decoded['role'],
+            'owner_id': decoded['owner_id'],
+            'full_name': 'User', // Placeholder
+          });
+        }
       }
+    } catch (e) {
+      debugPrint("Error loading session: $e");
+      // Fallback or ignore
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> login(String token, Map<String, dynamic> userData) async {

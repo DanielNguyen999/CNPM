@@ -6,18 +6,19 @@ class DebtService {
 
   DebtService(this.apiClient);
 
-  Future<Map<String, dynamic>> listDebts({String? status, int page = 1, int pageSize = 10}) async {
+  Future<Map<String, dynamic>> listDebts(
+      {String? status, int page = 1, int pageSize = 10}) async {
     try {
       final response = await apiClient.dio.get('/debts', queryParameters: {
         if (status != null && status != 'all') 'status': status,
         'page': page,
         'page_size': pageSize,
       });
-      
+
       final List debts = (response.data['items'] as List)
           .map((i) => Debt.fromJson(i))
           .toList();
-          
+
       return {
         'items': debts,
         'total': response.data['total'],
@@ -37,7 +38,8 @@ class DebtService {
     }
   }
 
-  Future<Debt> repayDebt(int id, {
+  Future<Debt> repayDebt(
+    int id, {
     required double amount,
     required String method,
     String? reference,

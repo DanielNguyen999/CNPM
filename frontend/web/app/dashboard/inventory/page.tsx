@@ -158,7 +158,7 @@ export default function InventoryPage() {
                             <div>
                                 <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Tổng tồn kho</p>
                                 <p className="text-3xl font-bold text-slate-900">
-                                    {(inventory || []).reduce((sum: number, i: any) => sum + Number(i.available_quantity), 0).toLocaleString('vi-VN')}
+                                    {Math.floor((inventory || []).reduce((sum: number, i: any) => sum + Number(i.available_quantity), 0)).toLocaleString('vi-VN')}
                                 </p>
                             </div>
                             <div className="p-3 bg-white rounded-full shadow-sm">

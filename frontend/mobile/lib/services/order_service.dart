@@ -10,7 +10,7 @@ class OrderService {
   Future<List<Order>> listOrders({String? status, String? search}) async {
     try {
       final response = await apiClient.dio.get('/orders', queryParameters: {
-        if (status != null) 'payment_status': status,
+        if (status != null) 'status': status,
         if (search != null) 'search': search,
       });
       final List data = response.data['items'] ?? [];
@@ -38,7 +38,7 @@ class OrderService {
             : null,
       );
       final response = await apiClient.dio.post(
-        '/orders',
+        '/orders/',
         data: payload,
         options: options,
       );

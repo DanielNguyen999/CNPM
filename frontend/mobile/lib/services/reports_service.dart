@@ -14,4 +14,25 @@ class ReportsService {
     });
     return DashboardStats.fromJson(response.data);
   }
+
+  Future<List<dynamic>> getRevenueReport(
+      String startDate, String endDate) async {
+    try {
+      final response = await apiClient.dio.get('/reports/revenue',
+          queryParameters: {'start_date': startDate, 'end_date': endDate});
+      return response.data;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getTopProducts({int limit = 5}) async {
+    try {
+      final response = await apiClient.dio
+          .get('/reports/top-products', queryParameters: {'limit': limit});
+      return response.data;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

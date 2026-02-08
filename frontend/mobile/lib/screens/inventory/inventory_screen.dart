@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:async';
 import '../../services/product_service.dart';
 import '../../models/product.dart';
@@ -46,6 +47,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       setState(() => _products = results);
     } catch (e) {
       debugPrint("Error loading products: $e");
+      Fluttertoast.showToast(msg: "Không thể tải danh sách sản phẩm");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -58,19 +60,61 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  Widget _buildSummaryHeader() {
+    double totalStock = 0;
+    for (var p in _products) {
+      totalStock += p.availableQuantity ?? 0;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        border: Border(
+          bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "TỔNG TỒN KHO",
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            totalStock.toInt().toString(),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.slate900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: "Kho hàng",
       body: Column(
         children: [
+          _buildSummaryHeader(),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -187,7 +231,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               color: (isLowStock
                                       ? AppColors.error
                                       : AppColors.success)
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(

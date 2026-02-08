@@ -25,7 +25,8 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   @override
   void initState() {
     super.initState();
-    _paidAmountController = TextEditingController(text: widget.totalAmount.toStringAsFixed(0));
+    _paidAmountController =
+        TextEditingController(text: widget.totalAmount.toStringAsFixed(0));
   }
 
   @override
@@ -51,25 +52,31 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
               const Text("Tổng tiền:"),
               Text(
                 AppFormatters.formatCurrency(widget.totalAmount),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          const Text("Hình thức:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const Text("Hình thức:",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 12),
           Row(
             children: [
               _buildMethodOption('Tiền mặt', 'CASH', Icons.money),
               const SizedBox(width: 12),
-              _buildMethodOption('Chuyển khoản', 'BANK_TRANSFER', Icons.account_balance),
+              _buildMethodOption(
+                  'Chuyển khoản', 'BANK_TRANSFER', Icons.account_balance),
             ],
           ),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Bán nợ?", style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text("Bán nợ?",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               Switch(
                 value: _isDebt,
                 onChanged: (val) {
@@ -78,11 +85,12 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                     if (_isDebt) {
                       _paidAmountController.text = "0";
                     } else {
-                      _paidAmountController.text = widget.totalAmount.toStringAsFixed(0);
+                      _paidAmountController.text =
+                          widget.totalAmount.toStringAsFixed(0);
                     }
                   });
                 },
-                activeColor: AppColors.primary,
+                activeTrackColor: AppColors.primary,
               ),
             ],
           ),
@@ -94,7 +102,8 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
               decoration: InputDecoration(
                 labelText: "Khách trả",
                 suffixText: "₫",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -119,7 +128,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? AppColors.primary : AppColors.slate200,
@@ -127,13 +138,15 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? AppColors.primary : AppColors.slate400),
+              Icon(icon,
+                  color: isSelected ? AppColors.primary : AppColors.slate400),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  color:
+                      isSelected ? AppColors.primary : AppColors.textSecondary,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),

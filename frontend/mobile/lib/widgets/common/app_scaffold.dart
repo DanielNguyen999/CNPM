@@ -34,15 +34,8 @@ class AppScaffold extends StatelessWidget {
         centerTitle: true,
         automaticallyImplyLeading: showBackButton,
         actions: actions,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(
-            color: AppColors.slate200,
-            height: 1.0,
-          ),
-        ),
       ),
-      body: body,
+      body: SafeArea(child: body),
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: bottomNavigationBar,
     );

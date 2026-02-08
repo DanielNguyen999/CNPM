@@ -11,8 +11,6 @@ class CashbookScreen extends StatefulWidget {
 }
 
 class _CashbookScreenState extends State<CashbookScreen> {
-  bool _isLoading = false;
-
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -90,7 +88,7 @@ class _CashbookScreenState extends State<CashbookScreen> {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: (isIncome ? AppColors.success : AppColors.error)
-                  .withOpacity(0.1),
+                  .withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
